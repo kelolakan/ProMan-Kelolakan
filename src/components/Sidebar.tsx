@@ -9,7 +9,8 @@ import {
   TrendingUp,
   LogOut,
   Shield,
-  Briefcase
+  Briefcase,
+  Coins
 } from "lucide-react";
 import { TeamMember, UserRole } from "../types";
 
@@ -33,6 +34,7 @@ export default function Sidebar({
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, desc: "Ringkasan proyek & analitik" },
     { id: "projects", label: "Projects", icon: Briefcase, desc: "Kelola semua proyek" },
+    { id: "finance", label: "Finance & Margin", icon: Coins, desc: "Kontrol anggaran & cashflow" },
     { id: "kanban", label: "Kanban Board", icon: FolderKanban, desc: "Pantau progres tugas tim" },
     { id: "points", label: "Riwayat Poin", icon: Trophy, desc: "Gamifikasi & performa tim" },
     { id: "team", label: "Team", icon: Users, desc: "Anggota tim & peran divisi" },

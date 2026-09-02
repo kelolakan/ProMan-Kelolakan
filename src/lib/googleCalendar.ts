@@ -1,3 +1,5 @@
+import { invalidateAuthToken } from "./googleAuth";
+
 /**
  * Google Calendar Integration Service
  */
@@ -10,35 +12,52 @@ async function googleApiFetch(url: string, accessToken: string, options: Request
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Google Calendar API Error (${response.status}): ${errText}`);
+    if (response.status === 401) {
+      invalidateAuthToken("401 Unauthorized / Token Expired");
+      const err = new Error(`Google Calendar API Error (401): Sesi autentikasi telah kedaluwarsa.`);
+      (err as any).status = 401;
+      (err as any).isAuthError = true;
+      throw err;
+    }
+    const err = new Error(`Google Calendar API Error (${response.status}): ${errText}`);
+    (err as any).status = response.status;
+    throw err;
+  }
+  if (response.status === 204) {
+    return null;
   }
   return response.json();
 }
 
 /**
- * Creates an all-day event on the user's Primary Google Calendar for a task's due date
+ * Creates an event on the user's Primary Google Calendar for a task's due date
  */
 export async function syncTaskToCalendar(
   accessToken: string,
   taskTitle: string,
   taskDescription: string,
-  dueDate: string
-): Promise<{ htmlLink: string }> {
+  dueDate: string,
+  projectName?: string,
+  priority?: string
+): Promise<{ eventId: string; htmlLink: string }> {
   try {
     const url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
-    // Format start/end for an all-day event
     const body = {
       summary: `📌 [ZonaTools] ${taskTitle}`,
-      description: `Tugas Manajemen Proyek:\n\n${taskDescription || "Tidak ada deskripsi."}\n\nJatuh Tempo: ${dueDate}`,
+      description: `Tugas Manajemen Proyek ZonaTools\n\n• Proyek: ${projectName || "ZonaTools Proyek"}\n• Prioritas: ${priority || "Normal"}\n• Tenggat Waktu: ${dueDate}\n\nDeskripsi:\n${taskDescription || "Tidak ada deskripsi rinci."}`,
       start: {
-        date: dueDate, // Format: YYYY-MM-DD
+        date: dueDate, // Format: YYYY-MM-DD for all-day event
       },
       end: {
-        date: dueDate, // All-day ends on the same date for Google Calendar
+        date: dueDate,
       },
       reminders: {
-        useDefault: true,
+        useDefault: false,
+        overrides: [
+          { method: "popup", minutes: 24 * 60 }, // 1 day before
+          { method: "popup", minutes: 60 }, // 1 hour before
+        ],
       },
     };
 
@@ -48,10 +67,70 @@ export async function syncTaskToCalendar(
     });
 
     return {
+      eventId: event.id,
       htmlLink: event.htmlLink,
     };
   } catch (error) {
     console.error("Error syncing task to calendar:", error);
+    throw error;
+  }
+}
+
+/**
+ * Updates an existing calendar event for a task
+ */
+export async function updateTaskCalendarEvent(
+  accessToken: string,
+  eventId: string,
+  taskTitle: string,
+  taskDescription: string,
+  dueDate: string,
+  projectName?: string,
+  priority?: string
+): Promise<{ htmlLink: string }> {
+  try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+
+    const body = {
+      summary: `📌 [ZonaTools] ${taskTitle}`,
+      description: `Tugas Manajemen Proyek ZonaTools\n\n• Proyek: ${projectName || "ZonaTools Proyek"}\n• Prioritas: ${priority || "Normal"}\n• Tenggat Waktu: ${dueDate}\n\nDeskripsi:\n${taskDescription || "Tidak ada deskripsi rinci."}`,
+      start: {
+        date: dueDate,
+      },
+      end: {
+        date: dueDate,
+      },
+    };
+
+    const event = await googleApiFetch(url, accessToken, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+
+    return {
+      htmlLink: event.htmlLink,
+    };
+  } catch (error) {
+    console.error("Error updating calendar event:", error);
+    throw error;
+  }
+}
+
+/**
+ * Deletes a calendar event when user untoggles or removes sync
+ */
+export async function deleteTaskCalendarEvent(
+  accessToken: string,
+  eventId: string
+): Promise<boolean> {
+  try {
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+    await googleApiFetch(url, accessToken, {
+      method: "DELETE",
+    });
+    return true;
+  } catch (error) {
+    console.error("Error deleting calendar event:", error);
     throw error;
   }
 }

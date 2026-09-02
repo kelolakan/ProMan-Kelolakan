@@ -29,6 +29,7 @@ export default function Header({
   const tabTitles: { [key: string]: { title: string; subtitle: string } } = {
     dashboard: { title: "Dashboard Analitik", subtitle: "Ikhtisar progres, performa poin, dan ulasan analitik AI." },
     projects: { title: "Daftar Proyek", subtitle: "Kelola, pantau, dan organisasikan semua inisiatif pekerjaan divisi." },
+    finance: { title: "Kontrol Finansial & Margin", subtitle: "Monitor nilai proyek, target margin, arus kas uang masuk/keluar, dan Kurva S finansial." },
     kanban: { title: "Kanban Board Pekerjaan", subtitle: "Manajemen visual tugas dengan pelacakan waktu real-time." },
     points: { title: "Riwayat Poin", subtitle: "Catatan produktivitas dan kontribusi performa tim." },
     team: { title: "Manajemen Tim", subtitle: "Atur role akses divisi dan hak administrasi sistem." },

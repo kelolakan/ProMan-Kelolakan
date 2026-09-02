@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Project, Task, TeamMember, UserRole, TaskStatus } from "../types";
+import { Project, Task, TeamMember, UserRole, TaskStatus, FinancialTransaction } from "../types";
 import {
   BarChart,
   Bar,
@@ -13,16 +13,19 @@ import {
   Pie,
   Cell
 } from "recharts";
-import { Sparkles, Trophy, CheckCircle, Clock, Briefcase, FileSpreadsheet, Send, AlertCircle } from "lucide-react";
+import { Sparkles, Trophy, CheckCircle, Clock, Briefcase, FileSpreadsheet, Send, AlertCircle, Coins, ArrowDownRight, ArrowUpRight, Wallet, Percent, SunMedium } from "lucide-react";
+import { formatIDR } from "./FinanceModule";
+import { formatWorkDuration, hoursToMandays } from "../lib/timeUtils";
 
 interface DashboardModuleProps {
   projects: Project[];
   tasks: Task[];
   members: TeamMember[];
   userMember: TeamMember | null;
+  transactions?: FinancialTransaction[];
 }
 
-export default function DashboardModule({ projects, tasks, members, userMember }: DashboardModuleProps) {
+export default function DashboardModule({ projects, tasks, members, userMember, transactions = [] }: DashboardModuleProps) {
   const [aiReport, setAiReport] = useState<string>("");
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>("");
@@ -41,6 +44,12 @@ export default function DashboardModule({ projects, tasks, members, userMember }
   // Est vs Logged Hours
   const totalEstHours = tasks.reduce((sum, t) => sum + (t.est_hours || 0), 0);
   const totalLoggedHours = tasks.reduce((sum, t) => sum + (t.logged_hours || 0), 0);
+
+  // Financial Calculators across all projects
+  const totalContractValues = projects.reduce((sum, p) => sum + (p.contract_value || 0), 0);
+  const totalInflow = transactions.filter((t) => t.type === "IN").reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalOutflow = transactions.filter((t) => t.type === "OUT").reduce((sum, t) => sum + (t.amount || 0), 0);
+  const totalNetCashflow = totalInflow - totalOutflow;
 
   // Recharts Data: Points per Team Member
   const barChartData = members.map((m) => ({
@@ -188,9 +197,18 @@ export default function DashboardModule({ projects, tasks, members, userMember }
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Waktu Kerja Tim</span>
-            <span className="block text-2xl font-black text-gray-800 mt-1">{totalLoggedHours} Jam</span>
-            <span className="text-[10px] text-gray-500 block mt-0.5">Estimasi Awal: {totalEstHours} Jam</span>
+            <div className="flex items-center gap-1.5">
+              <span className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Waktu Kerja Tim</span>
+              <span className="text-[9px] bg-amber-50 text-amber-700 font-bold px-1.5 py-0.2 rounded border border-amber-200">
+                8j/Hari
+              </span>
+            </div>
+            <span className="block text-2xl font-black text-gray-800 mt-1">
+              {totalLoggedHours}j <span className="text-sm font-semibold text-gray-500">({hoursToMandays(totalLoggedHours)} Hari)</span>
+            </span>
+            <span className="text-[10px] text-gray-500 block mt-0.5">
+              Rencana: {totalEstHours} Jam ({hoursToMandays(totalEstHours)} Hari Kerja)
+            </span>
           </div>
         </div>
 
@@ -205,6 +223,54 @@ export default function DashboardModule({ projects, tasks, members, userMember }
               {members.reduce((sum, m) => sum + (m.points || 0), 0)} pts
             </span>
             <span className="text-[10px] text-purple-600 font-medium block mt-0.5">Berhasil Dimonitor</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Executive Summary Ribbon */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white shadow-md border border-indigo-900/40">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-indigo-800/40">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-indigo-600/30">
+              <Coins className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-white">Ringkasan Finansial & Arus Kas Global</h4>
+              <p className="text-[10px] text-indigo-200 mt-0.5">
+                Kontrol akumulasi nilai kontrak, realisasi termin masuk, dan serapan beban biaya
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold rounded-full flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Net Cashflow: {formatIDR(totalNetCashflow)}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-xs">
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-indigo-300 font-medium block">Total Nilai Proyek</span>
+            <span className="text-sm font-black text-white mt-1 block">{formatIDR(totalContractValues)}</span>
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-emerald-300 font-medium block flex items-center gap-1">
+              <ArrowDownRight className="w-3 h-3 text-emerald-400" /> Realisasi Kas Masuk
+            </span>
+            <span className="text-sm font-black text-emerald-400 mt-1 block">{formatIDR(totalInflow)}</span>
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-rose-300 font-medium block flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3 text-rose-400" /> Realisasi Kas Keluar
+            </span>
+            <span className="text-sm font-black text-rose-400 mt-1 block">{formatIDR(totalOutflow)}</span>
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="text-[10px] text-yellow-300 font-medium block flex items-center gap-1">
+              <Wallet className="w-3 h-3 text-yellow-400" /> Kas Bersih (Surplus)
+            </span>
+            <span className="text-sm font-black text-yellow-400 mt-1 block">{formatIDR(totalNetCashflow)}</span>
           </div>
         </div>
       </div>

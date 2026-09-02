@@ -27,13 +27,25 @@
 
 /* Print CSS Overrides */
 @media print {
-  body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    font-size: 12pt !important;
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
   }
 
-  aside, header, button, select, input, .print\:hidden, [role="button"] {
+  html, body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  aside, header, nav, .print\:hidden, [role="button"], button:not(.print-include) {
     display: none !important;
   }
 
@@ -49,14 +61,38 @@
     display: block !important;
   }
 
-  .bg-white {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
+  .print\:flex {
+    display: flex !important;
   }
 
-  .border, .border-gray-100 {
-    border-color: #e2e8f0 !important;
+  .print\:grid {
+    display: grid !important;
+  }
+
+  .print-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-break-after-page {
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+
+  .print-clean-border {
+    border-color: #cbd5e1 !important;
+  }
+
+  .print-header-bg {
+    background-color: #f1f5f9 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Table borders in print */
+  table, th, td {
+    border-collapse: collapse !important;
   }
 }
+
 

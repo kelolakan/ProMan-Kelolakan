@@ -1,3 +1,5 @@
+import { invalidateAuthToken } from "./googleAuth";
+
 /**
  * Google Drive Storage Sync Service
  */
@@ -14,7 +16,16 @@ async function googleApiFetch(url: string, accessToken: string, options: Request
   const response = await fetch(url, { ...options, headers });
   if (!response.ok) {
     const errText = await response.text();
-    throw new Error(`Google Drive API Error (${response.status}): ${errText}`);
+    if (response.status === 401) {
+      invalidateAuthToken("401 Unauthorized / Token Expired");
+      const err = new Error(`Google Drive API Error (401): Sesi autentikasi telah kedaluwarsa.`);
+      (err as any).status = 401;
+      (err as any).isAuthError = true;
+      throw err;
+    }
+    const err = new Error(`Google Drive API Error (${response.status}): ${errText}`);
+    (err as any).status = response.status;
+    throw err;
   }
   return response.json();
 }
@@ -109,6 +120,13 @@ export async function uploadFileToDrive(
 
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 401) {
+        invalidateAuthToken("401 Unauthorized / Token Expired");
+        const err = new Error(`Google Drive Upload Error (401): Sesi autentikasi telah kedaluwarsa.`);
+        (err as any).status = 401;
+        (err as any).isAuthError = true;
+        throw err;
+      }
       throw new Error(`Google Drive Upload Error (${response.status}): ${errText}`);
     }
 

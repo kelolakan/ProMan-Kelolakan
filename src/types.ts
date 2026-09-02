@@ -31,6 +31,32 @@ export interface Project {
   start_date: string;
   end_date: string;
   status: ProjectStatus;
+  contract_value?: number; // Nilai Total Proyek (IDR)
+  target_margin_pct?: number; // Target Margin (%) misal 30%
+  target_margin_amount?: number; // Target Margin (IDR)
+}
+
+export type TransactionType = "IN" | "OUT";
+
+export interface FinancialTransaction {
+  id: string;
+  project_id: string;
+  type: TransactionType;
+  category: string; // Termin DP, Termin 1, Pelunasan, Material, Subkon, Gaji/Honor, Operasional, Peralatan, Lain-lain
+  amount: number;
+  date: string; // YYYY-MM-DD
+  description: string;
+  reference?: string; // No Invoice / Kwitansi
+  created_by: string;
+  created_at: string;
+}
+
+export interface FinancialSCurvePoint {
+  week: string; // e.g. "Minggu 1"
+  planned_expense_pct: number; // Rencana Pengeluaran %
+  planned_expense: number; // Rencana Pengeluaran Nominal
+  actual_expense: number; // Realisasi Pengeluaran Nominal Kumulatif
+  actual_revenue: number; // Realisasi Kas Masuk Nominal Kumulatif
 }
 
 export interface Task {
@@ -45,6 +71,9 @@ export interface Task {
   est_hours: number;
   logged_hours: number;
   priority: TaskPriority;
+  calendar_synced?: boolean;
+  calendar_event_id?: string;
+  calendar_event_link?: string;
 }
 
 export interface ChatMessage {

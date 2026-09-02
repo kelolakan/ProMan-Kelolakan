@@ -1,3 +1,5 @@
+import { invalidateAuthToken } from "./googleAuth";
+
 /**
  * Google Gmail Send Service
  */
@@ -49,6 +51,13 @@ export async function sendEmailNotification(
 
     if (!response.ok) {
       const errText = await response.text();
+      if (response.status === 401) {
+        invalidateAuthToken("401 Unauthorized / Token Expired");
+        const err = new Error(`Gmail API Error (401): Sesi autentikasi telah kedaluwarsa.`);
+        (err as any).status = 401;
+        (err as any).isAuthError = true;
+        throw err;
+      }
       throw new Error(`Gmail API Send Error (${response.status}): ${errText}`);
     }
   } catch (error) {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Project, Task, ProjectStatus, UserRole, TeamMember } from "../types";
-import { Briefcase, Calendar, CheckSquare, Plus, FolderPlus, HelpCircle } from "lucide-react";
+import { Briefcase, Calendar, CheckSquare, Plus, FolderPlus, HelpCircle, Coins, Percent } from "lucide-react";
+import { formatIDR } from "./FinanceModule";
 
 interface ProjectsModuleProps {
   projects: Project[];
@@ -25,6 +26,8 @@ export default function ProjectsModule({
   const [division, setDivision] = useState("Tech");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [contractValue, setContractValue] = useState("150000000");
+  const [targetMarginPct, setTargetMarginPct] = useState("30");
 
   const isAuthorizedManager =
     userMember?.role === UserRole.ADMIN || userMember?.role === UserRole.MANAGER;
@@ -39,6 +42,10 @@ export default function ProjectsModule({
       return;
     }
 
+    const cv = parseFloat(contractValue) || 150000000;
+    const mp = parseFloat(targetMarginPct) || 30;
+    const ma = Math.round((cv * mp) / 100);
+
     const newProject: Project = {
       id: "p-" + Math.random().toString(36).substr(2, 9),
       name,
@@ -47,6 +54,9 @@ export default function ProjectsModule({
       start_date: startDate,
       end_date: endDate,
       status: ProjectStatus.ACTIVE,
+      contract_value: cv,
+      target_margin_pct: mp,
+      target_margin_amount: ma,
     };
 
     onAddProject(newProject);
@@ -55,6 +65,8 @@ export default function ProjectsModule({
     setDivision("Tech");
     setStartDate("");
     setEndDate("");
+    setContractValue("150000000");
+    setTargetMarginPct("30");
     setShowAddForm(false);
   };
 
@@ -117,6 +129,38 @@ export default function ProjectsModule({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500">Nilai Kontrak Proyek (IDR) *</label>
+              <input
+                type="number"
+                required
+                min="1"
+                value={contractValue}
+                onChange={(e) => setContractValue(e.target.value)}
+                placeholder="150000000"
+                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-gray-800 focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-[10px] text-gray-400 font-semibold">{formatIDR(Number(contractValue))}</span>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-500">Target Profit Margin (%) *</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  max="100"
+                  value={targetMarginPct}
+                  onChange={(e) => setTargetMarginPct(e.target.value)}
+                  placeholder="30"
+                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-purple-700 focus:outline-none focus:border-purple-500 pr-8"
+                />
+                <span className="absolute right-3 top-2 text-xs font-bold text-gray-400">%</span>
+              </div>
+              <span className="text-[10px] text-purple-600 font-semibold">
+                Nominal: {formatIDR(Math.round(((parseFloat(contractValue) || 0) * (parseFloat(targetMarginPct) || 0)) / 100))}
+              </span>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-gray-500">Tanggal Mulai *</label>
@@ -197,14 +241,25 @@ export default function ProjectsModule({
                   <h4 className="font-bold text-gray-800 text-sm leading-tight group-hover:text-indigo-600">
                     {p.name}
                   </h4>
-                  <p className="text-xs text-gray-400 mt-1.5 leading-relaxed line-clamp-3">
+                  <p className="text-xs text-gray-400 mt-1.5 leading-relaxed line-clamp-2">
                     {p.description || "Tidak ada deskripsi rinci proyek."}
                   </p>
+                </div>
+
+                {/* Financial Summary Pill in Card */}
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Coins className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="font-bold text-gray-800">{formatIDR(p.contract_value || 150000000)}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-purple-700 font-semibold bg-purple-50 px-2 py-0.5 rounded-md">
+                    <span>Margin {p.target_margin_pct || 30}%</span>
+                  </div>
                 </div>
               </div>
 
               {/* Progress and Dates block */}
-              <div className="mt-6 pt-4 border-t border-gray-50 space-y-3">
+              <div className="mt-5 pt-3 border-t border-gray-50 space-y-3">
                 {/* Progress bar */}
                 <div>
                   <div className="flex items-center justify-between text-xs mb-1.5">

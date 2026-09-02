@@ -14,6 +14,7 @@ import TeamModule from "./modules/TeamModule";
 import MessagesModule from "./modules/MessagesModule";
 import FilesModule from "./modules/FilesModule";
 import ReportsModule from "./modules/ReportsModule";
+import FinanceModule from "./modules/FinanceModule";
 
 import {
   Project,
@@ -22,6 +23,7 @@ import {
   TimeLog,
   DriveFileMetadata,
   TeamMember,
+  FinancialTransaction,
   UserRole,
   TaskStatus
 } from "./types";
@@ -34,13 +36,16 @@ import {
   DEFAULT_CHATS,
   DEFAULT_TIME_LOGS,
   DEFAULT_FILES,
-  DEFAULT_MEMBERS
+  DEFAULT_MEMBERS,
+  DEFAULT_TRANSACTIONS
 } from "./lib/dataStore";
 
 import {
   initAuth,
   googleSignIn,
-  logout
+  logout,
+  onTokenInvalidated,
+  invalidateAuthToken
 } from "./lib/googleAuth";
 
 import {
@@ -50,7 +55,7 @@ import {
   appendSheetRow
 } from "./lib/googleSheets";
 
-import { Sparkles, ArrowRight, ShieldCheck, HelpCircle } from "lucide-react";
+import { Sparkles, ArrowRight, ShieldCheck, HelpCircle, AlertCircle, X, CheckCircle2, RefreshCw } from "lucide-react";
 
 export default function App() {
   // Global Navigation State
@@ -61,6 +66,8 @@ export default function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sheetsConnected, setSheetsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [sheetsId, setSheetsId] = useState<string | null>(null);
 
@@ -71,6 +78,7 @@ export default function App() {
   const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
   const [files, setFiles] = useState<DriveFileMetadata[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
 
   // Active Context
   const [activeProjectId, setActiveProjectId] = useState<string>("");
@@ -89,6 +97,7 @@ export default function App() {
     setTimeLogs(local.timeLogs);
     setFiles(local.files);
     setMembers(local.members);
+    setTransactions(local.transactions || DEFAULT_TRANSACTIONS);
 
     if (local.projects.length > 0) {
       setActiveProjectId(local.projects[0].id);
@@ -123,25 +132,39 @@ export default function App() {
   }, []);
 
   /**
-   * Google Auth initialization listener
+   * Google Auth initialization & invalidation listener
    */
   useEffect(() => {
-    const unsubscribe = initAuth(
+    const unsubAuth = initAuth(
       (currentUser, token) => {
         setUser(currentUser);
         setAccessToken(token);
         setIsDemoMode(false);
         setSheetsConnected(true);
+        setSessionNotice(null);
         syncUserMemberProfile(currentUser.email || "", currentUser.displayName || "");
         triggerCloudSync(token);
       },
       () => {
-        // Not authenticated
+        // Not authenticated or expired
         setSheetsConnected(false);
         setAccessToken(null);
       }
     );
-    return () => unsubscribe();
+
+    const unsubInvalid = onTokenInvalidated((reason) => {
+      setSheetsConnected(false);
+      setAccessToken(null);
+      setSheetsId(null);
+      if (reason && reason.includes("401")) {
+        setSessionNotice("Sesi autentikasi Google telah kedaluwarsa. Data disimpan di memori lokal. Klik 'Hubungkan Google Workspace' untuk menyinkronkan kembali.");
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      unsubInvalid();
+    };
   }, [syncUserMemberProfile]);
 
   /**
@@ -149,6 +172,7 @@ export default function App() {
    */
   const triggerCloudSync = async (token: string) => {
     setIsConnecting(true);
+    setAuthError(null);
     try {
       // Find or provision sheets DB
       const spreadsheetId = await findOrCreateSpreadsheet(token);
@@ -160,6 +184,7 @@ export default function App() {
       const cloudChats = await getSheetRows(token, spreadsheetId, "chats");
       const cloudTimeLogs = await getSheetRows(token, spreadsheetId, "time_tracking");
       const cloudFiles = await getSheetRows(token, spreadsheetId, "files");
+      const cloudFinances = await getSheetRows(token, spreadsheetId, "finances");
 
       // Auto populate templates if spreadsheets are empty on first sync
       if (cloudProjects.length === 0) {
@@ -167,7 +192,7 @@ export default function App() {
           token,
           spreadsheetId,
           "projects",
-          ["id", "name", "description", "division", "start_date", "end_date", "status"],
+          ["id", "name", "description", "division", "start_date", "end_date", "status", "contract_value", "target_margin_pct", "target_margin_amount"],
           DEFAULT_PROJECTS
         );
         await overwriteSheetRows(
@@ -198,12 +223,20 @@ export default function App() {
           ["id", "project_id", "file_name", "mime_type", "size", "uploaded_by", "uploaded_at"],
           DEFAULT_FILES
         );
+        await overwriteSheetRows(
+          token,
+          spreadsheetId,
+          "finances",
+          ["id", "project_id", "type", "category", "amount", "date", "description", "reference", "created_by", "created_at"],
+          DEFAULT_TRANSACTIONS
+        );
 
         setProjects(DEFAULT_PROJECTS);
         setTasks(DEFAULT_TASKS);
         setChats(DEFAULT_CHATS);
         setTimeLogs(DEFAULT_TIME_LOGS);
         setFiles(DEFAULT_FILES);
+        setTransactions(DEFAULT_TRANSACTIONS);
         if (DEFAULT_PROJECTS.length > 0) {
           setActiveProjectId(DEFAULT_PROJECTS[0].id);
         }
@@ -214,13 +247,21 @@ export default function App() {
         setChats(cloudChats);
         setTimeLogs(cloudTimeLogs);
         setFiles(cloudFiles);
+        setTransactions(cloudFinances && cloudFinances.length > 0 ? cloudFinances : DEFAULT_TRANSACTIONS);
         if (cloudProjects.length > 0) {
           setActiveProjectId(cloudProjects[0].id);
         }
       }
+      setSessionNotice(null);
     } catch (err: any) {
-      console.error("Cloud synchronization error:", err);
-      alert("Sinkronisasi otomatis gagal, menggunakan cache offline lokal.");
+      console.warn("Sinkronisasi cloud dihentikan, menggunakan penyimpanan offline lokal:", err?.message || err);
+      if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401") || err?.message?.includes("UNAUTHENTICATED")) {
+        invalidateAuthToken("401 UNAUTHENTICATED");
+        setSheetsConnected(false);
+        setAccessToken(null);
+        setSheetsId(null);
+        setSessionNotice("Sesi autentikasi Google telah kedaluwarsa. Data Anda tetap aman secara lokal.");
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -228,6 +269,8 @@ export default function App() {
 
   const handleConnectSheets = async () => {
     setIsConnecting(true);
+    setAuthError(null);
+    setSessionNotice(null);
     try {
       const res = await googleSignIn();
       if (res) {
@@ -239,7 +282,8 @@ export default function App() {
         await triggerCloudSync(res.accessToken);
       }
     } catch (err: any) {
-      alert("Koneksi gagal: " + err.message);
+      console.warn("Koneksi Google:", err);
+      setAuthError(err?.message || "Koneksi Google gagal. Silakan coba lagi atau gunakan Mode Tamu.");
     } finally {
       setIsConnecting(false);
     }
@@ -262,6 +306,7 @@ export default function App() {
     setSheetsConnected(false);
     setIsDemoMode(false);
     setUserMember(null);
+    setSessionNotice(null);
   };
 
   /**
@@ -278,11 +323,102 @@ export default function App() {
           accessToken,
           sheetsId,
           "projects",
-          ["id", "name", "description", "division", "start_date", "end_date", "status"],
+          ["id", "name", "description", "division", "start_date", "end_date", "status", "contract_value", "target_margin_pct", "target_margin_amount"],
           newPrj
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan proyek ke Google Sheets gagal:", err?.message || err);
+        }
+      }
+    }
+  };
+
+  const handleUpdateProjectFinance = async (
+    projectId: string,
+    contractValue: number,
+    targetMarginPct: number,
+    targetMarginAmount?: number
+  ) => {
+    const marginAmount = targetMarginAmount ?? Math.round((contractValue * targetMarginPct) / 100);
+    const updatedProjects = projects.map((p) =>
+      p.id === projectId
+        ? {
+            ...p,
+            contract_value: contractValue,
+            target_margin_pct: targetMarginPct,
+            target_margin_amount: marginAmount,
+          }
+        : p
+    );
+    setProjects(updatedProjects);
+    saveLocalData({ projects: updatedProjects });
+
+    if (sheetsConnected && accessToken && sheetsId) {
+      try {
+        await overwriteSheetRows(
+          accessToken,
+          sheetsId,
+          "projects",
+          ["id", "name", "description", "division", "start_date", "end_date", "status", "contract_value", "target_margin_pct", "target_margin_amount"],
+          updatedProjects
+        );
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan finansial proyek ke Google Sheets gagal:", err?.message || err);
+        }
+      }
+    }
+  };
+
+  const handleAddTransaction = async (newTx: FinancialTransaction) => {
+    const updated = [newTx, ...transactions];
+    setTransactions(updated);
+    saveLocalData({ transactions: updated });
+
+    if (sheetsConnected && accessToken && sheetsId) {
+      try {
+        await appendSheetRow(
+          accessToken,
+          sheetsId,
+          "finances",
+          ["id", "project_id", "type", "category", "amount", "date", "description", "reference", "created_by", "created_at"],
+          newTx
+        );
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan transaksi ke Google Sheets gagal:", err?.message || err);
+        }
+      }
+    }
+  };
+
+  const handleDeleteTransaction = async (txId: string) => {
+    const updated = transactions.filter((t) => t.id !== txId);
+    setTransactions(updated);
+    saveLocalData({ transactions: updated });
+
+    if (sheetsConnected && accessToken && sheetsId) {
+      try {
+        await overwriteSheetRows(
+          accessToken,
+          sheetsId,
+          "finances",
+          ["id", "project_id", "type", "category", "amount", "date", "description", "reference", "created_by", "created_at"],
+          updated
+        );
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Pembaruan transaksi ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -301,8 +437,36 @@ export default function App() {
           ["id", "project_id", "title", "description", "status", "due_date", "assignee_name", "assignee_email", "est_hours", "logged_hours", "priority"],
           newTask
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan tugas ke Google Sheets gagal:", err?.message || err);
+        }
+      }
+    }
+  };
+
+  const handleUpdateTask = async (updatedTask: Task) => {
+    const updated = tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t));
+    setTasks(updated);
+    saveLocalData({ tasks: updated });
+
+    if (sheetsConnected && accessToken && sheetsId) {
+      try {
+        await overwriteSheetRows(
+          accessToken,
+          sheetsId,
+          "tasks",
+          ["id", "project_id", "title", "description", "status", "due_date", "assignee_name", "assignee_email", "est_hours", "logged_hours", "priority", "calendar_synced", "calendar_event_id", "calendar_event_link"],
+          updated
+        );
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Pembaruan tugas ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -318,11 +482,15 @@ export default function App() {
           accessToken,
           sheetsId,
           "tasks",
-          ["id", "project_id", "title", "description", "status", "due_date", "assignee_name", "assignee_email", "est_hours", "logged_hours", "priority"],
+          ["id", "project_id", "title", "description", "status", "due_date", "assignee_name", "assignee_email", "est_hours", "logged_hours", "priority", "calendar_synced", "calendar_event_id", "calendar_event_link"],
           updated
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Pembaruan status tugas ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -341,8 +509,12 @@ export default function App() {
           ["id", "task_id", "user_email", "duration_mins", "description", "timestamp"],
           newLog
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan log waktu ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -374,8 +546,12 @@ export default function App() {
           ["id", "project_id", "sender_name", "sender_email", "message", "timestamp"],
           newMsg
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan chat ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -394,8 +570,12 @@ export default function App() {
           ["id", "project_id", "file_name", "mime_type", "size", "uploaded_by", "uploaded_at"],
           newFile
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Penyimpanan metadata file ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -414,8 +594,12 @@ export default function App() {
           ["id", "project_id", "file_name", "mime_type", "size", "uploaded_by", "uploaded_at"],
           updated
         );
-      } catch (err) {
-        console.error(err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Pembaruan metadata file ke Google Sheets gagal:", err?.message || err);
+        }
       }
     }
   };
@@ -443,8 +627,12 @@ export default function App() {
         const cloudChats = await getSheetRows(accessToken, sheetsId, "chats");
         setChats(cloudChats);
         saveLocalData({ chats: cloudChats });
-      } catch (err) {
-        console.error("Gagal menyegarkan chat:", err);
+      } catch (err: any) {
+        if (err?.status === 401 || err?.isAuthError || err?.message?.includes("401")) {
+          invalidateAuthToken("401");
+        } else {
+          console.warn("Gagal menyegarkan chat:", err?.message || err);
+        }
       }
     }
   };
@@ -467,7 +655,27 @@ export default function App() {
             </p>
           </div>
 
-          <div className="space-y-3.5 pt-4">
+          {/* Auth Error Banner if login issue occurred */}
+          {authError && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 p-3 rounded-2xl text-xs text-left flex items-start justify-between gap-2.5 animate-fade-in">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] leading-relaxed">
+                  <span className="font-bold block text-red-200">Gagal Menghubungkan Google</span>
+                  <span>{authError}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setAuthError(null)}
+                className="text-red-400 hover:text-red-200 p-0.5 cursor-pointer shrink-0"
+                title="Tutup pesan"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-3.5 pt-2">
             {/* Real Google Sign In popup trigger */}
             <button
               onClick={handleConnectSheets}
@@ -536,6 +744,32 @@ export default function App() {
           userMember={userMember}
         />
 
+        {/* Informative Session Notice Banner (e.g. when OAuth token expired gracefully) */}
+        {sessionNotice && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-8 py-2.5 flex items-center justify-between gap-4 text-xs text-amber-900 animate-fade-in shrink-0">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{sessionNotice}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleConnectSheets}
+                disabled={isConnecting}
+                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1 rounded-lg text-xs transition-colors cursor-pointer"
+              >
+                Hubungkan Ulang
+              </button>
+              <button
+                onClick={() => setSessionNotice(null)}
+                className="text-amber-700 hover:text-amber-900 p-1 cursor-pointer"
+                title="Tutup pemberitahuan"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic view content rendering area */}
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {currentTab === "dashboard" && (
@@ -544,6 +778,7 @@ export default function App() {
               tasks={tasks}
               members={members}
               userMember={userMember}
+              transactions={transactions}
             />
           )}
 
@@ -558,6 +793,18 @@ export default function App() {
             />
           )}
 
+          {currentTab === "finance" && (
+            <FinanceModule
+              activeProject={activeProject}
+              projects={projects}
+              transactions={transactions}
+              userMember={userMember}
+              onAddTransaction={handleAddTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
+              onUpdateProjectFinance={handleUpdateProjectFinance}
+            />
+          )}
+
           {currentTab === "kanban" && (
             <KanbanModule
               activeProject={activeProject}
@@ -568,9 +815,11 @@ export default function App() {
               sheetsConnected={sheetsConnected}
               accessToken={accessToken}
               onAddTask={handleAddTask}
+              onUpdateTask={handleUpdateTask}
               onUpdateTaskStatus={handleUpdateTaskStatus}
               onLogTime={handleLogTime}
               onUpdatePoints={handleUpdatePoints}
+              onConnectGoogle={handleConnectSheets}
             />
           )}
 
@@ -616,8 +865,13 @@ export default function App() {
           {currentTab === "scurve" && (
             <ReportsModule
               activeProject={activeProject}
+              projects={projects}
               tasks={tasks}
               members={members}
+              timeLogs={timeLogs}
+              transactions={transactions}
+              userMember={userMember}
+              onSelectProject={(pId) => setActiveProjectId(pId)}
             />
           )}
         </main>
