@@ -1,0 +1,251 @@
+{
+  "projects": [
+    {
+      "id": "p-ftth-01",
+      "name": "FTTH Rollout Cluster Cakung - Jakarta Timur (PT. Exven Mitra Solusindo)",
+      "description": "Penggelaran jaringan Fiber To The Home (FTTH) 1.500 Homepass, penarikan kabel feeder 96C, distribusi 48C, instalasi ODC, FAT, dan uji redaman OTDR.",
+      "division": "FTTH Rollout / OSP",
+      "start_date": "2026-06-15",
+      "end_date": "2026-08-30",
+      "status": "Active",
+      "contract_value": 450000000,
+      "target_margin_pct": 32,
+      "target_margin_amount": 144000000
+    },
+    {
+      "id": "p-ftth-02",
+      "name": "Penarikan Feeder 96C & Distribusi 48C Tebet - Kemang (Jakarta Selatan)",
+      "description": "Pekerjaan penarikan kabel fiber optic udara OSP, pemasangan joint closure, grounding tiang, dan perizinan lintas instansi Jakarta Selatan.",
+      "division": "Civil & Joint Pole",
+      "start_date": "2026-07-01",
+      "end_date": "2026-08-20",
+      "status": "Active",
+      "contract_value": 280000000,
+      "target_margin_pct": 30,
+      "target_margin_amount": 84000000
+    },
+    {
+      "id": "p-ftth-03",
+      "name": "Survey SITAC, Perizinan Jalur Tiang Pemda DKI & Splicing 1000 HP",
+      "description": "Survey rute rute tiang PLN/Telkom, perizinan warga RT/RW, dishub, dan penempatan FAT (Fiber Access Terminal).",
+      "division": "SITAC & Perizinan DKI",
+      "start_date": "2026-07-10",
+      "end_date": "2026-09-15",
+      "status": "Active",
+      "contract_value": 175000000,
+      "target_margin_pct": 35,
+      "target_margin_amount": 61250000
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t-01",
+      "project_id": "p-ftth-01",
+      "title": "Penarikan Kabel Feeder 96C Segmen 1 (Cakung Barat)",
+      "description": "Penarikan kabel optik udara sepanjang 2.4 KM melewati 60 tiang tumpu, pemasangan suspension clamp dan dead-end clamp.",
+      "status": "Doing",
+      "due_date": "2026-07-10",
+      "assignee_name": "Rizky OSP Lead",
+      "assignee_email": "rizky.osp@exven.co.id",
+      "est_hours": 32,
+      "logged_hours": 24,
+      "priority": "High"
+    },
+    {
+      "id": "t-02",
+      "project_id": "p-ftth-01",
+      "title": "Splicing Joint Closure 96C & Terminasi ODC 144 Core",
+      "description": "Pengupasan kabel loose tube, penyambungan fusion splicer, penataan tray closure, dan pelabelan port ODC.",
+      "status": "Todo",
+      "due_date": "2026-07-15",
+      "assignee_name": "Agus Splicer & OTDR",
+      "assignee_email": "agus.splicer@exven.co.id",
+      "est_hours": 20,
+      "logged_hours": 0,
+      "priority": "High"
+    },
+    {
+      "id": "t-03",
+      "project_id": "p-ftth-01",
+      "title": "Pengurusan Izin Crossing Jalan & Rekomendasi Teknis Dishub",
+      "description": "Koordinasi lapangan dengan dinas perhubungan dan kelurahan untuk pekerjaan penarikan kabel crossing jalan utama malam hari.",
+      "status": "Done",
+      "due_date": "2026-06-25",
+      "assignee_name": "Hendra SITAC",
+      "assignee_email": "hendra.sitac@exven.co.id",
+      "est_hours": 16,
+      "logged_hours": 18,
+      "priority": "Medium"
+    },
+    {
+      "id": "t-04",
+      "project_id": "p-ftth-01",
+      "title": "Pengukuran Redaman OTDR End-to-End & Pembuatan As-Built Drawing",
+      "description": "Uji redaman dua arah 1310nm/1550nm pada seluruh core feeder dan distribusi, validasi loss budget < 0.25 dB/splice.",
+      "status": "Todo",
+      "due_date": "2026-08-15",
+      "assignee_name": "Dimas QA/QC",
+      "assignee_email": "dimas.qc@exven.co.id",
+      "est_hours": 24,
+      "logged_hours": 0,
+      "priority": "High"
+    },
+    {
+      "id": "t-05",
+      "project_id": "p-ftth-01",
+      "title": "Pemasangan 30 Unit FAT 16 Port di Tiang Distribusi",
+      "description": "Instalasi Fiber Access Terminal pada tiang distribusi, splitter 1:16, grounding dan penomoran label QR FAT.",
+      "status": "Todo",
+      "due_date": "2026-07-28",
+      "assignee_name": "Agus Splicer & OTDR",
+      "assignee_email": "agus.splicer@exven.co.id",
+      "est_hours": 20,
+      "logged_hours": 10,
+      "priority": "Medium"
+    }
+  ],
+  "chats": [
+    {
+      "id": "c-01",
+      "project_id": "p-ftth-01",
+      "sender_name": "Kelolakan (Project Director)",
+      "sender_email": "kelolakan@gmail.com",
+      "message": "Selamat pagi tim PT. Exven Mitra Solusindo. Mohon koordinasi crossing kabel feeder Cakung diprioritaskan malam ini.",
+      "timestamp": "2026-06-20T08:15:00.000Z"
+    },
+    {
+      "id": "c-02",
+      "project_id": "p-ftth-01",
+      "sender_name": "Hendra SITAC",
+      "sender_email": "hendra.sitac@exven.co.id",
+      "message": "Siap Pak, izin Dishub dan koordinasi dengan Polsek setempat sudah rampung. Tim OSP bisa mulai jam 23.00 WIB.",
+      "timestamp": "2026-06-20T08:45:00.000Z"
+    }
+  ],
+  "timeLogs": [
+    {
+      "id": "tl-01",
+      "task_id": "t-01",
+      "user_email": "rizky.osp@exven.co.id",
+      "duration_mins": 240,
+      "description": "Penarikan kabel feeder 96C tiang 1 s/d tiang 25 sepanjang 1.2 KM.",
+      "timestamp": "2026-06-22T17:30:00.000Z"
+    }
+  ],
+  "files": [
+    {
+      "id": "f-sample-01",
+      "project_id": "p-ftth-01",
+      "file_name": "S-Curve-Cluster-Cakung-Exven.pdf",
+      "mime_type": "application/pdf",
+      "size": 245000,
+      "uploaded_by": "kelolakan@gmail.com",
+      "uploaded_at": "2026-06-18T10:00:00.000Z",
+      "url": "/uploads/sample-scurve.pdf"
+    }
+  ],
+  "members": [
+    {
+      "email": "kelolakan@gmail.com",
+      "name": "Kelolakan (Project Director)",
+      "role": "Admin / Division Head",
+      "division": "FTTH Rollout / Management",
+      "points": 220,
+      "passwordHash": "admin123"
+    },
+    {
+      "email": "hendra.sitac@exven.co.id",
+      "name": "Hendra SITAC",
+      "role": "Project Manager",
+      "division": "SITAC & Perizinan DKI",
+      "points": 140,
+      "passwordHash": "exven2026"
+    },
+    {
+      "email": "rizky.osp@exven.co.id",
+      "name": "Rizky OSP Lead",
+      "role": "Project Manager",
+      "division": "FTTH Rollout / OSP",
+      "points": 165,
+      "passwordHash": "exven2026"
+    },
+    {
+      "email": "agus.splicer@exven.co.id",
+      "name": "Agus Splicer & OTDR",
+      "role": "Team Member",
+      "division": "Splicing & Testing",
+      "points": 180,
+      "passwordHash": "exven2026"
+    },
+    {
+      "email": "dimas.qc@exven.co.id",
+      "name": "Dimas QA/QC",
+      "role": "Team Member",
+      "division": "QA/QC & ATP",
+      "points": 125,
+      "passwordHash": "exven2026"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "ft-01",
+      "project_id": "p-ftth-01",
+      "type": "IN",
+      "category": "Termin 1 (DP 30%)",
+      "amount": 135000000,
+      "date": "2026-06-16",
+      "description": "Penerimaan Down Payment 30% proyek FTTH Cluster Cakung dari Klien Operator.",
+      "reference": "INV-EXV-2026-01",
+      "created_by": "kelolakan@gmail.com",
+      "created_at": "2026-06-16T09:00:00.000Z"
+    },
+    {
+      "id": "ft-02",
+      "project_id": "p-ftth-01",
+      "type": "IN",
+      "category": "Termin 2 (Progress 40%)",
+      "amount": 180000000,
+      "date": "2026-07-15",
+      "description": "Pencairan termin progress milestone 50% pekerjaan penggelaran kabel dan ODC.",
+      "reference": "INV-EXV-2026-04",
+      "created_by": "kelolakan@gmail.com",
+      "created_at": "2026-07-15T14:30:00.000Z"
+    },
+    {
+      "id": "ft-03",
+      "project_id": "p-ftth-01",
+      "type": "OUT",
+      "category": "Material Fiber Optic",
+      "amount": 68500000,
+      "date": "2026-06-18",
+      "description": "Pembelian kabel FO ADSS 96C/48C, Drop Core 1C, ODC 144C, FAT 16 Port, dan aksesoris tiang (Suspension, Dead End, Pole Band).",
+      "reference": "PO-MAT-088",
+      "created_by": "rizky.osp@exven.co.id",
+      "created_at": "2026-06-18T11:00:00.000Z"
+    },
+    {
+      "id": "ft-04",
+      "project_id": "p-ftth-01",
+      "type": "OUT",
+      "category": "Subkon / Upah Tarikan Kabel",
+      "amount": 48000000,
+      "date": "2026-06-30",
+      "description": "Pembayaran mandays tim penarikan kabel fiber optik lapangan tahap 1 (4 Tim OSP).",
+      "reference": "HR-OSP-01",
+      "created_by": "hendra.sitac@exven.co.id",
+      "created_at": "2026-06-30T17:00:00.000Z"
+    },
+    {
+      "id": "ft-05",
+      "project_id": "p-ftth-01",
+      "type": "OUT",
+      "category": "Perizinan & SITAC Pemda",
+      "amount": 16500000,
+      "date": "2026-06-20",
+      "description": "Biaya retribusi rekomendasi teknis Dishub, perizinan tiang pemda, dan koordinasi lingkungan warga.",
+      "reference": "SITAC-CKG-09",
+      "created_by": "hendra.sitac@exven.co.id",
+      "created_at": "2026-06-20T10:00:00.000Z"
+    }
+  ]
+}

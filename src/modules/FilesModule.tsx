@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Project, DriveFileMetadata, TeamMember, UserRole } from "../types";
-import { getOrCreateAttachmentsFolder, uploadFileToDrive, deleteFileFromDrive } from "../lib/googleDrive";
+import { apiUploadFile, apiDeleteFile } from "../lib/apiClient";
 import {
   Upload,
   File,
@@ -8,17 +8,16 @@ import {
   Image as ImageIcon,
   Trash2,
   ExternalLink,
-  HelpCircle,
   CloudUpload,
-  Clock
+  Download,
+  Server
 } from "lucide-react";
 
 interface FilesModuleProps {
   activeProject: Project | null;
   files: DriveFileMetadata[];
   userMember: TeamMember | null;
-  sheetsConnected: boolean;
-  accessToken: string | null;
+  serverConnected?: boolean;
   onAddFileMetadata: (fileMeta: DriveFileMetadata) => void;
   onDeleteFileMetadata: (fileId: string) => void;
 }
@@ -27,8 +26,7 @@ export default function FilesModule({
   activeProject,
   files,
   userMember,
-  sheetsConnected,
-  accessToken,
+  serverConnected = true,
   onAddFileMetadata,
   onDeleteFileMetadata
 }: FilesModuleProps) {
@@ -38,8 +36,7 @@ export default function FilesModule({
 
   const projectFiles = files.filter((f) => f.project_id === activeProject?.id);
 
-  const isAuthorizedToUpload =
-    userMember?.role !== UserRole.VIEWER;
+  const isAuthorizedToUpload = userMember?.role !== UserRole.VIEWER;
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,76 +69,49 @@ export default function FilesModule({
       alert("Maaf, peran Anda tidak diizinkan untuk mengunggah file.");
       return;
     }
-    if (!sheetsConnected || !accessToken) {
-      alert("Harap hubungkan akun Google Workspace Anda terlebih dahulu untuk mengaktifkan upload Drive!");
+
+    if (!activeProject) {
+      alert("Pilih proyek aktif terlebih dahulu sebelum mengunggah file.");
       return;
     }
 
     setIsUploading(true);
     try {
-      // 1. Find or create root folder on Drive
-      const folderId = await getOrCreateAttachmentsFolder(accessToken);
+      const uploadedFileMeta = await apiUploadFile(
+        file,
+        activeProject.id,
+        userMember?.email || "admin@exven.co.id"
+      );
 
-      // 2. Upload file to Drive
-      const uploadResult = await uploadFileToDrive(accessToken, file, folderId);
-
-      // 3. Save metadata
-      const newFileMeta: DriveFileMetadata = {
-        id: uploadResult.id,
-        project_id: activeProject?.id || "",
-        file_name: file.name,
-        mime_type: file.type || "application/octet-stream",
-        size: file.size,
-        uploaded_by: userMember?.email || "anonymous@gmail.com",
-        uploaded_at: new Date().toISOString(),
-      };
-
-      onAddFileMetadata(newFileMeta);
-      alert(`Berhasil mengunggah "${file.name}" langsung ke Google Drive Anda! 📂`);
+      onAddFileMetadata(uploadedFileMeta);
+      alert(`Berhasil mengunggah "${file.name}" langsung ke penyimpanan server VPS! 📂`);
     } catch (error: any) {
       console.error(error);
-      alert("Gagal mengunggah file ke Google Drive: " + error.message);
+      alert("Gagal mengunggah file ke server: " + error.message);
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleDeleteFile = async (fileMeta: DriveFileMetadata) => {
-    // SECURITY RULES REQUIRE EXPLICIT USER CONFIRMATION DIALOG FOR MUTATION
     const isConfirmed = window.confirm(
-      `Apakah Anda yakin ingin menghapus file "${fileMeta.file_name}" secara permanen dari Google Drive?\n\nTindakan ini tidak dapat dibatalkan!`
+      `Apakah Anda yakin ingin menghapus file "${fileMeta.file_name}" secara permanen dari server?\n\nTindakan ini tidak dapat dibatalkan!`
     );
 
     if (!isConfirmed) return;
 
-    if (!sheetsConnected || !accessToken) {
-      alert("Harap hubungkan akun Google Workspace terlebih dahulu!");
-      return;
-    }
-
     try {
-      // 1. Delete from Drive
-      await deleteFileFromDrive(accessToken, memberFileIdAdjuster(fileMeta.id));
-      
-      // 2. Delete from Sheets
+      await apiDeleteFile(fileMeta.id);
       onDeleteFileMetadata(fileMeta.id);
-      alert("File berhasil dihapus secara permanen.");
+      alert("File berhasil dihapus dari server.");
     } catch (err: any) {
       console.error(err);
-      // Even if Google Drive fails (e.g. file already deleted manually), let's clear the metadata to keep sheet clean
       onDeleteFileMetadata(fileMeta.id);
-      alert("Dihapus dari database sistem.");
     }
-  };
-
-  // Helper to resolve mock Drive IDs from default states
-  const memberFileIdAdjuster = (id: string) => {
-    if (id.startsWith("mock-")) return "dummy"; // Guard mock default files
-    return id;
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (!bytes || bytes === 0) return "0 Bytes";
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -160,7 +130,7 @@ export default function FilesModule({
         <File className="w-12 h-12 text-slate-400 mx-auto" />
         <h4 className="font-bold text-gray-800">Proyek Aktif Belum Dipilih</h4>
         <p className="text-xs text-gray-400 leading-relaxed">
-          Silakan buka modul **Projects** terlebih dahulu dan pilih salah satu proyek aktif untuk mulai mengelola berkas dokumentasi Google Drive.
+          Silakan buka modul **Projects** terlebih dahulu dan pilih salah satu proyek aktif untuk mulai mengelola berkas dokumentasi.
         </p>
       </div>
     );
@@ -197,12 +167,12 @@ export default function FilesModule({
             {isUploading ? (
               <div className="space-y-2">
                 <span className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto block"></span>
-                <p className="text-xs font-bold text-slate-700">Mengunggah Berkas ke Google Drive...</p>
+                <p className="text-xs font-bold text-slate-700">Mengunggah Berkas ke Server VPS...</p>
               </div>
             ) : (
               <>
-                <p className="text-xs font-bold text-slate-800">Tarik & Lepas file di sini, atau klik untuk telusuri</p>
-                <p className="text-[10px] text-gray-400 mt-1">Mendukung file proposal, gambar desain, spreadsheet XLS, dll.</p>
+                <p className="text-xs font-bold text-slate-800">Tarik & Lepas file di sini, atau klik untuk memilih berkas</p>
+                <p className="text-[10px] text-gray-400 mt-1">Mendukung berkas PDF Kurva S, lampiran BAST, foto penarikan kabel, surat perizinan, dsb.</p>
               </>
             )}
           </div>
@@ -211,22 +181,25 @@ export default function FilesModule({
 
       {/* Files List Directory */}
       <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-        <div>
-          <h3 className="font-bold text-gray-800 text-sm">Direktori Materi Referensi & File Proyek</h3>
-          <p className="text-[10px] text-gray-400 mt-0.5">Daftar file yang disimpan aman langsung di dalam Google Drive pengguna</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-gray-800 text-sm">Direktori Materi Referensi & File Proyek</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5">Berkas tersimpan aman langsung di dalam server VPS PT. Exven Mitra Solusindo</p>
+          </div>
+          <span className="text-xs text-indigo-600 font-bold bg-indigo-50 px-2.5 py-1 rounded-lg">
+            {projectFiles.length} Berkas
+          </span>
         </div>
 
         <div className="divide-y divide-gray-50 max-h-[400px] overflow-y-auto custom-scrollbar">
           {projectFiles.length === 0 ? (
             <div className="text-center py-12 text-gray-300 text-xs">
-              Belum ada berkas pendukung di proyek ini.
+              Belum ada berkas pendukung yang diunggah di proyek ini.
             </div>
           ) : (
             projectFiles.map((f) => {
               const FileIcon = getFileIcon(f.mime_type);
-              const downloadUrl = f.id.startsWith("mock-")
-                ? "#"
-                : `https://drive.google.com/file/d/${f.id}/view`;
+              const fileUrl = (f as any).url || `/uploads/${f.file_name}`;
 
               return (
                 <div key={f.id} className="py-4 flex items-center justify-between gap-4">
@@ -244,25 +217,23 @@ export default function FilesModule({
                     </div>
                   </div>
 
-                  {/* Actions buttons */}
+                  {/* Action buttons */}
                   <div className="flex items-center gap-2">
-                    {!f.id.startsWith("mock-") && (
-                      <a
-                        href={downloadUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-2 hover:bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-lg border border-gray-100 flex items-center gap-1.5 text-[10px] font-bold"
-                        title="Buka berkas di Google Drive"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Pratinjau Drive</span>
-                      </a>
-                    )}
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 hover:bg-slate-50 text-slate-500 hover:text-indigo-600 rounded-lg border border-gray-100 flex items-center gap-1.5 text-[10px] font-bold transition-all"
+                      title="Buka atau unduh berkas"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Unduh / Buka</span>
+                    </a>
 
                     {isAuthorizedToUpload && (
                       <button
                         onClick={() => handleDeleteFile(f)}
-                        className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg border border-gray-100 cursor-pointer"
+                        className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg border border-gray-100 cursor-pointer transition-all"
                         title="Hapus file"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

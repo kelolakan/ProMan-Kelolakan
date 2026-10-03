@@ -1,15 +1,14 @@
 import React from "react";
 import { Project, TeamMember, UserRole } from "../types";
-import { Cloud, CloudOff, FolderDot, ArrowRight, ShieldCheck } from "lucide-react";
+import { Server, Database, FolderDot, LogIn, CheckCircle2 } from "lucide-react";
 
 interface HeaderProps {
   currentTab: string;
   projects: Project[];
   activeProjectId: string;
   setActiveProjectId: (id: string) => void;
-  sheetsConnected: boolean;
-  onConnectSheets: () => void;
-  isConnecting: boolean;
+  serverConnected?: boolean;
+  onOpenLoginModal?: () => void;
   userMember: TeamMember | null;
 }
 
@@ -18,27 +17,26 @@ export default function Header({
   projects,
   activeProjectId,
   setActiveProjectId,
-  sheetsConnected,
-  onConnectSheets,
-  isConnecting,
+  serverConnected = true,
+  onOpenLoginModal,
   userMember
 }: HeaderProps) {
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   // Tab translations
   const tabTitles: { [key: string]: { title: string; subtitle: string } } = {
-    dashboard: { title: "Dashboard Analitik", subtitle: "Ikhtisar progres, performa poin, dan ulasan analitik AI." },
-    projects: { title: "Daftar Proyek", subtitle: "Kelola, pantau, dan organisasikan semua inisiatif pekerjaan divisi." },
+    dashboard: { title: "Dashboard Analitik", subtitle: "Ikhtisar progres proyek, performa poin, dan status pekerjaan tim." },
+    projects: { title: "Daftar Proyek", subtitle: "Kelola, pantau, dan organisasikan semua inisiatif pekerjaan divisi PT. Exven Mitra Solusindo." },
     finance: { title: "Kontrol Finansial & Margin", subtitle: "Monitor nilai proyek, target margin, arus kas uang masuk/keluar, dan Kurva S finansial." },
-    kanban: { title: "Kanban Board Pekerjaan", subtitle: "Manajemen visual tugas dengan pelacakan waktu real-time." },
-    points: { title: "Riwayat Poin", subtitle: "Catatan produktivitas dan kontribusi performa tim." },
-    team: { title: "Manajemen Tim", subtitle: "Atur role akses divisi dan hak administrasi sistem." },
-    messages: { title: "Diskusi Kolaborasi", subtitle: "Komunikasi dan koordinasi langsung di dalam tim proyek." },
-    files: { title: "File & Dokumentasi", subtitle: "Unggah materi referensi langsung ke penyimpanan Google Drive." },
+    kanban: { title: "Kanban Board Pekerjaan", subtitle: "Manajemen visual tugas dengan pelacakan waktu kerja tim real-time." },
+    points: { title: "Riwayat Poin", subtitle: "Catatan produktivitas dan kontribusi performa tim lapangan & perizinan." },
+    team: { title: "Manajemen Tim", subtitle: "Daftar anggota tim, role akses divisi, dan hak administrasi sistem." },
+    messages: { title: "Diskusi Kolaborasi", subtitle: "Komunikasi dan koordinasi langsung di dalam tim proyek internal." },
+    files: { title: "File & Dokumentasi", subtitle: "Unggah dokumen perizinan, kurva S, dan foto lapangan ke server." },
     scurve: { title: "Laporan Kurva S", subtitle: "Visualisasi perbandingan kemajuan rencana terhadap realisasi aktual." },
   };
 
-  const activeTitle = tabTitles[currentTab] || { title: "Project Management", subtitle: "Sistem Kolaborasi Tim Real-time" };
+  const activeTitle = tabTitles[currentTab] || { title: "Exven Project Management", subtitle: "Sistem Manajemen Proyek Mandiri" };
 
   return (
     <header className="h-20 bg-white border-b border-gray-100 px-8 flex items-center justify-between shrink-0">
@@ -69,31 +67,29 @@ export default function Header({
           </div>
         )}
 
-        {/* Sync / OAuth Connection Status */}
-        {sheetsConnected ? (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-100">
-            <Cloud className="w-4 h-4 text-emerald-500 animate-pulse" />
-            <span>Terhubung Google Workspace</span>
+        {/* Server & Database Connection Status */}
+        {serverConnected ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200/60 shadow-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="hidden sm:inline">Database Server Terhubung</span>
+            <span className="sm:hidden">Online</span>
           </div>
         ) : (
-          <button
-            onClick={onConnectSheets}
-            disabled={isConnecting}
-            className="gsi-material-button text-xs shadow-md border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-medium px-3.5 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 cursor-pointer"
-          >
-            {isConnecting ? (
-              <span className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style={{ display: "block", width: "16px", height: "16px" }}>
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                <path fill="none" d="M0 0h48v48H0z"></path>
-              </svg>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-xl border border-amber-200">
+              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+              <span>Mode Tamu</span>
+            </div>
+            {onOpenLoginModal && (
+              <button
+                onClick={onOpenLoginModal}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Masuk Akun</span>
+              </button>
             )}
-            <span>{isConnecting ? "Menghubungkan..." : "Hubungkan Google Workspace"}</span>
-          </button>
+          </div>
         )}
       </div>
     </header>

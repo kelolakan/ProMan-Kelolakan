@@ -1,67 +1,320 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
+import {
+  readDatabase,
+  writeDatabase,
+  authenticateUser,
+  changeUserPassword,
+  UPLOADS_DIR,
+  StoredUser,
+} from "./server/db";
 
 dotenv.config();
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: "25mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
-  // Lazy initialize Gemini client safely
-  let ai: GoogleGenAI | null = null;
-  const key = process.env.GEMINI_API_KEY;
-  if (key) {
-    ai = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
+  // Serve static files uploaded by the team
+  app.use("/uploads", express.static(UPLOADS_DIR));
+
+  // Configure Multer for local VPS disk storage
+  const storage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, UPLOADS_DIR);
+    },
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      cb(null, `${uniqueSuffix}${ext}`);
+    },
+  });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+  });
+
+  // ==========================================
+  // 1. AUTHENTICATION ENDPOINTS
+  // ==========================================
+  app.post("/api/auth/login", (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email dan password wajib diisi." });
+    }
+
+    const authResult = authenticateUser(email.trim(), password);
+    if (!authResult) {
+      return res.status(401).json({ error: "Email atau password yang Anda masukkan salah." });
+    }
+
+    return res.json({
+      success: true,
+      user: authResult.user,
+      token: authResult.token,
+    });
+  });
+
+  app.post("/api/auth/change-password", (req, res) => {
+    const { email, oldPassword, newPassword } = req.body;
+    if (!email || !oldPassword || !newPassword) {
+      return res.status(400).json({ error: "Data ganti password tidak lengkap." });
+    }
+
+    const verify = authenticateUser(email.trim(), oldPassword);
+    if (!verify) {
+      return res.status(401).json({ error: "Password lama tidak sesuai." });
+    }
+
+    const success = changeUserPassword(email.trim(), newPassword);
+    if (!success) {
+      return res.status(404).json({ error: "Pengguna tidak ditemukan." });
+    }
+
+    return res.json({ success: true, message: "Password berhasil diperbarui!" });
+  });
+
+  // ==========================================
+  // 2. CENTRALIZED DATABASE SYNC ENDPOINTS
+  // ==========================================
+  app.get("/api/data", (_req, res) => {
+    const db = readDatabase();
+    // Return members without sensitive password hashes
+    const safeMembers = db.members.map(({ passwordHash, ...safe }) => safe);
+    return res.json({
+      projects: db.projects || [],
+      tasks: db.tasks || [],
+      chats: db.chats || [],
+      timeLogs: db.timeLogs || [],
+      files: db.files || [],
+      members: safeMembers,
+      transactions: db.transactions || [],
+    });
+  });
+
+  app.post("/api/data/sync", (req, res) => {
+    const { projects, tasks, chats, timeLogs, files, members, transactions } = req.body;
+    const db = readDatabase();
+
+    if (projects) db.projects = projects;
+    if (tasks) db.tasks = tasks;
+    if (chats) db.chats = chats;
+    if (timeLogs) db.timeLogs = timeLogs;
+    if (files) db.files = files;
+    if (transactions) db.transactions = transactions;
+
+    if (members && Array.isArray(members)) {
+      // Preserve existing password hashes for updated members
+      db.members = members.map((m: any) => {
+        const existing = db.members.find((em) => em.email.toLowerCase() === m.email?.toLowerCase());
+        return {
+          email: m.email,
+          name: m.name,
+          role: m.role,
+          division: m.division,
+          points: m.points ?? 0,
+          passwordHash: existing?.passwordHash || "exven2026",
+        };
+      });
+    }
+
+    writeDatabase(db);
+    return res.json({ success: true, message: "Data berhasil disinkronisasi ke server VPS." });
+  });
+
+  // Mutations: Projects
+  app.post("/api/projects", (req, res) => {
+    const project = req.body;
+    if (!project || !project.id) {
+      return res.status(400).json({ error: "Data proyek tidak valid." });
+    }
+    const db = readDatabase();
+    const idx = db.projects.findIndex((p) => p.id === project.id);
+    if (idx !== -1) {
+      db.projects[idx] = { ...db.projects[idx], ...project };
+    } else {
+      db.projects.unshift(project);
+    }
+    writeDatabase(db);
+    return res.json({ success: true, project });
+  });
+
+  app.delete("/api/projects/:id", (req, res) => {
+    const { id } = req.params;
+    const db = readDatabase();
+    db.projects = db.projects.filter((p) => p.id !== id);
+    writeDatabase(db);
+    return res.json({ success: true });
+  });
+
+  // Mutations: Tasks
+  app.post("/api/tasks", (req, res) => {
+    const task = req.body;
+    if (!task || !task.id) {
+      return res.status(400).json({ error: "Data tugas tidak valid." });
+    }
+    const db = readDatabase();
+    const idx = db.tasks.findIndex((t) => t.id === task.id);
+    if (idx !== -1) {
+      db.tasks[idx] = { ...db.tasks[idx], ...task };
+    } else {
+      db.tasks.unshift(task);
+    }
+    writeDatabase(db);
+    return res.json({ success: true, task });
+  });
+
+  app.delete("/api/tasks/:id", (req, res) => {
+    const { id } = req.params;
+    const db = readDatabase();
+    db.tasks = db.tasks.filter((t) => t.id !== id);
+    writeDatabase(db);
+    return res.json({ success: true });
+  });
+
+  // Mutations: Finances / Transactions
+  app.post("/api/finances", (req, res) => {
+    const transaction = req.body;
+    if (!transaction || !transaction.id) {
+      return res.status(400).json({ error: "Data transaksi tidak valid." });
+    }
+    const db = readDatabase();
+    const idx = db.transactions.findIndex((t) => t.id === transaction.id);
+    if (idx !== -1) {
+      db.transactions[idx] = { ...db.transactions[idx], ...transaction };
+    } else {
+      db.transactions.unshift(transaction);
+    }
+    writeDatabase(db);
+    return res.json({ success: true, transaction });
+  });
+
+  app.delete("/api/finances/:id", (req, res) => {
+    const { id } = req.params;
+    const db = readDatabase();
+    db.transactions = db.transactions.filter((t) => t.id !== id);
+    writeDatabase(db);
+    return res.json({ success: true });
+  });
+
+  // Mutations: Chats
+  app.post("/api/chats", (req, res) => {
+    const chat = req.body;
+    if (!chat || !chat.id) {
+      return res.status(400).json({ error: "Pesan chat tidak valid." });
+    }
+    const db = readDatabase();
+    db.chats.push(chat);
+    writeDatabase(db);
+    return res.json({ success: true, chat });
+  });
+
+  // Mutations: Time Logs
+  app.post("/api/time_logs", (req, res) => {
+    const timeLog = req.body;
+    if (!timeLog || !timeLog.id) {
+      return res.status(400).json({ error: "Data log waktu tidak valid." });
+    }
+    const db = readDatabase();
+    db.timeLogs.push(timeLog);
+
+    // Automatically award points to member
+    const memberIdx = db.members.findIndex((m) => m.email.toLowerCase() === timeLog.user_email?.toLowerCase());
+    if (memberIdx !== -1) {
+      db.members[memberIdx].points = (db.members[memberIdx].points || 0) + 15;
+    }
+
+    writeDatabase(db);
+    return res.json({ success: true, timeLog });
+  });
+
+  // Mutations: Team Members (Admin only)
+  app.post("/api/members", (req, res) => {
+    const member = req.body;
+    if (!member || !member.email) {
+      return res.status(400).json({ error: "Email anggota tim wajib diisi." });
+    }
+    const db = readDatabase();
+    const idx = db.members.findIndex((m) => m.email.toLowerCase() === member.email.toLowerCase());
+    if (idx !== -1) {
+      db.members[idx] = {
+        ...db.members[idx],
+        name: member.name || db.members[idx].name,
+        role: member.role || db.members[idx].role,
+        division: member.division || db.members[idx].division,
+        points: member.points ?? db.members[idx].points,
+      };
+    } else {
+      const newMember: StoredUser = {
+        email: member.email.toLowerCase(),
+        name: member.name || member.email.split("@")[0],
+        role: member.role || "Team Member",
+        division: member.division || "Operasional",
+        points: member.points ?? 10,
+        passwordHash: member.password || "exven2026",
+      };
+      db.members.push(newMember);
+    }
+    writeDatabase(db);
+    return res.json({ success: true, member });
+  });
+
+  // ==========================================
+  // 3. FILE STORAGE (DIRECT VPS UPLOADS)
+  // ==========================================
+  app.post("/api/files/upload", upload.single("file"), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: "Harap pilih berkas untuk diunggah." });
+    }
+
+    const { projectId, uploadedBy } = req.body;
+    const fileId = `f-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const fileMeta = {
+      id: fileId,
+      project_id: projectId || "",
+      file_name: req.file.originalname,
+      mime_type: req.file.mimetype || "application/octet-stream",
+      size: req.file.size,
+      uploaded_by: uploadedBy || "admin@exven.co.id",
+      uploaded_at: new Date().toISOString(),
+      url: `/uploads/${req.file.filename}`,
+    };
+
+    const db = readDatabase();
+    db.files.unshift(fileMeta);
+    writeDatabase(db);
+
+    return res.json({ success: true, file: fileMeta });
+  });
+
+  app.delete("/api/files/:id", (req, res) => {
+    const { id } = req.params;
+    const db = readDatabase();
+    const idx = db.files.findIndex((f) => f.id === id);
+    if (idx !== -1) {
+      const fileMeta = db.files[idx];
+      if (fileMeta.url && fileMeta.url.startsWith("/uploads/")) {
+        const filename = path.basename(fileMeta.url);
+        const physicalPath = path.join(UPLOADS_DIR, filename);
+        if (fs.existsSync(physicalPath)) {
+          try {
+            fs.unlinkSync(physicalPath);
+          } catch (e) {
+            console.warn("Failed to remove file from disk:", e);
+          }
         }
       }
-    });
-  }
-
-  // API Route for AI Project Analytics
-  app.post("/api/gemini/analyze", async (req, res) => {
-    try {
-      if (!ai) {
-        return res.status(500).json({ error: "Gemini API key is not configured on the server. Please add GEMINI_API_KEY in the Secrets panel." });
-      }
-
-      const { projectData, monthlySummaryRequest } = req.body;
-
-      const prompt = `You are a professional Project Management Consultant. Analyze the following project, task, and team performance metrics to generate a comprehensive monthly analytical report.
-      
-      Project Data:
-      ${JSON.stringify(projectData, null, 2)}
-      
-      Manager's request:
-      ${monthlySummaryRequest || "Provide a detailed analysis on project completion rate, task distribution, bottle necks, time tracking logs, and a 3-step action plan to improve productivity."}
-      
-      Format your response beautifully in Markdown. Use bold headings, bullet points, comparison tables, and clearly structured sections:
-      1. Executive Summary
-      2. Performance Metrics & Bottlenecks
-      3. S-Curve & Timeline Status Evaluation
-      4. Productivity & Poin Performa analysis
-      5. Actionable Recommendations (Next 30 Days)
-      
-      Respond in Indonesian language since the manager is Indonesian.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-      });
-
-      res.json({ analysis: response.text });
-    } catch (error: any) {
-      console.error("Gemini analyze route error:", error);
-      res.status(500).json({ error: error.message || "An error occurred during Gemini project analysis." });
+      db.files.splice(idx, 1);
+      writeDatabase(db);
     }
+    return res.json({ success: true });
   });
 
   // Serve static assets or use Vite middleware
@@ -72,15 +325,15 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Exven Project Management Server running on port ${PORT}`);
   });
 }
 
