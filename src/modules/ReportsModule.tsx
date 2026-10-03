@@ -242,7 +242,7 @@ export default function ReportsModule({
     let csv = "\uFEFF"; // UTF-8 BOM for Excel
 
     // HEADER SECTION
-    csv += `ZONATOOLS PROJECT MANAGEMENT - LAPORAN PERFORMA & KEUANGAN BULANAN\r\n`;
+    csv += `EXVEN PROJECT MANAJEMEN BY KELOLAKAN - LAPORAN PERFORMA & KEUANGAN BULANAN\r\n`;
     csv += `Tanggal Dihasilkan,${new Date().toLocaleDateString("id-ID", { dateStyle: "full" })}\r\n`;
     csv += `Periode Laporan,${periodLabel}\r\n`;
     csv += `Nama Proyek,${exportScope === "ACTIVE" ? activeProject.name : "Semua Portofolio Proyek"}\r\n`;
@@ -436,8 +436,9 @@ export default function ReportsModule({
       <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">ZONATOOLS PROJECT MANAGEMENT</h1>
-            <h2 className="text-sm font-bold text-indigo-700 mt-0.5 uppercase tracking-wide">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">EXVEN PROJECT MANAJEMEN</h1>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">by Kelolakan</p>
+            <h2 className="text-sm font-bold text-indigo-700 mt-1 uppercase tracking-wide">
               Laporan Resmi Kinerja Bulanan & Pengendalian Keuangan Proyek
             </h2>
           </div>

@@ -1,5 +1,5 @@
 {
-  "name": "ZonaTools Project Management",
+  "name": "Exven Project Manajemen by Kelolakan",
   "description": "Sistem Manajemen Proyek terintegrasi dengan Google Sheets, Google Drive, Google Calendar, dan Gmail. Dilengkapi Ekspor Laporan Kinerja & Keuangan (PDF & Excel), Kontrol Finansial & Margin Proyek, Kurva S, Kanban, Chat Realtime, Pelacakan Waktu, dan Analitik AI.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -603,8 +603,11 @@ export default function FinanceModule({
       {/* Printable Sheet Header (Visible Only in Print Mode) */}
       <div className="hidden print:block border-b border-gray-200 pb-4 mb-4">
         <h1 className="text-2xl font-black text-gray-900">
-          ZONATOOLS PROJECT MANAGEMENT
+          EXVEN PROJECT MANAJEMEN
         </h1>
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+          by Kelolakan
+        </p>
         <h2 className="text-sm font-bold text-indigo-700 mt-1">
           Laporan Resmi Keuangan & Arus Kas Proyek
         </h2>

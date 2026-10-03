@@ -47,12 +47,12 @@ export default function Sidebar({
     <aside className="w-72 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800">
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-lg shadow-indigo-500/20">
-          ZT
+        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-indigo-500/20 shrink-0">
+          EX
         </div>
-        <div>
-          <h1 className="font-bold text-lg tracking-tight text-white">ZonaTools</h1>
-          <p className="text-xs text-slate-400">Project Management</p>
+        <div className="min-w-0">
+          <h1 className="font-bold text-base tracking-tight text-white truncate leading-snug">Exven Project</h1>
+          <p className="text-xs text-indigo-400 font-medium">by Kelolakan</p>
         </div>
       </div>
 

@@ -647,9 +647,10 @@ export default function App() {
 
           <div className="space-y-2">
             <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-indigo-600/20 mx-auto">
-              ZT
+              EX
             </div>
-            <h2 className="text-xl font-black text-white tracking-tight">ZonaTools Project Management</h2>
+            <h2 className="text-xl font-black text-white tracking-tight">Exven Project Manajemen</h2>
+            <p className="text-xs text-indigo-400 font-semibold tracking-wider uppercase">by Kelolakan</p>
             <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
               Platform kolaborasi tim real-time, monitoring Kurva S, dan integrasi Google Sheets & Drive.
             </p>

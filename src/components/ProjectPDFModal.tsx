@@ -1030,7 +1030,7 @@ export default function ProjectPDFModal({
 
               {/* Footer Stamp & Security Note */}
               <div className="flex items-center justify-between text-[8px] text-slate-400 pt-2 border-t border-slate-200">
-                <span>Dokumen ini diterbitkan secara resmi melalui ZONATOOLS Project Management Suite.</span>
+                <span>Dokumen ini diterbitkan secara resmi melalui Exven Project Manajemen by Kelolakan.</span>
                 <span>Halaman 1 dari 1 (Dokumen Sah Lampiran BAST)</span>
               </div>
             </div>
