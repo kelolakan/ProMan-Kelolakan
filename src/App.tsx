@@ -60,15 +60,13 @@ import {
 
 import {
   Sparkles,
-  ArrowRight,
   ShieldCheck,
   AlertCircle,
   X,
   CheckCircle2,
   Lock,
-  Mail,
+  User,
   LogIn,
-  Server,
   UserCheck
 } from "lucide-react";
 
@@ -79,12 +77,11 @@ export default function App() {
   // Authentication State
   const [userMember, setUserMember] = useState<TeamMember | null>(null);
   const [serverConnected, setServerConnected] = useState<boolean>(true);
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
   // Login form inputs
-  const [emailInput, setEmailInput] = useState<string>("");
+  const [usernameInput, setUsernameInput] = useState<string>("");
   const [passwordInput, setPasswordInput] = useState<string>("");
 
   // Change Password Modal
@@ -124,7 +121,6 @@ export default function App() {
       const session = getStoredSession();
       if (session) {
         setUserMember(session.user);
-        setIsDemoMode(false);
       }
 
       // 3. Attempt to fetch fresh data from centralized server
@@ -156,13 +152,13 @@ export default function App() {
   /**
    * Handle user login via self-hosted API
    */
-  const handleLoginSubmit = async (e?: React.FormEvent, customEmail?: string, customPass?: string) => {
+  const handleLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const emailToUse = customEmail || emailInput;
-    const passToUse = customPass || passwordInput;
+    const idToUse = usernameInput.trim();
+    const passToUse = passwordInput;
 
-    if (!emailToUse || !passToUse) {
-      setAuthError("Harap masukkan email dan password.");
+    if (!idToUse || !passToUse) {
+      setAuthError("Harap masukkan username dan kata sandi.");
       return;
     }
 
@@ -170,9 +166,8 @@ export default function App() {
     setAuthError(null);
 
     try {
-      const session = await apiLogin(emailToUse, passToUse);
+      const session = await apiLogin(idToUse, passToUse);
       setUserMember(session.user);
-      setIsDemoMode(false);
       setServerConnected(true);
 
       // Fetch latest datasets from server
@@ -189,30 +184,9 @@ export default function App() {
       }
       saveLocalData(serverData);
     } catch (err: any) {
-      setAuthError(err.message || "Gagal masuk. Periksa kembali email dan password Anda.");
+      setAuthError(err.message || "Gagal masuk. Periksa kembali username dan kata sandi Anda.");
     } finally {
       setIsLoggingIn(false);
-    }
-  };
-
-  /**
-   * Quick team login helper for PT. Exven Mitra Solusindo
-   */
-  const handleQuickLogin = (email: string, pass: string) => {
-    setEmailInput(email);
-    setPasswordInput(pass);
-    handleLoginSubmit(undefined, email, pass);
-  };
-
-  /**
-   * Guest demo bypass
-   */
-  const handleEnterDemo = () => {
-    setIsDemoMode(true);
-    const demoUser = DEFAULT_MEMBERS[0]; // Admin by default
-    setUserMember(demoUser);
-    if (projects.length > 0) {
-      setActiveProjectId(projects[0].id);
     }
   };
 
@@ -222,8 +196,7 @@ export default function App() {
   const handleLogout = () => {
     clearStoredSession();
     setUserMember(null);
-    setIsDemoMode(false);
-    setEmailInput("");
+    setUsernameInput("");
     setPasswordInput("");
   };
 
@@ -418,15 +391,15 @@ export default function App() {
   };
 
   // =========================================================================
-  // LOGIN SCREEN (Independent Email & Password without Google)
+  // LOGIN SCREEN (Independent Username & Password for PT. Exven Mitra Solusindo)
   // =========================================================================
-  if (!userMember && !isDemoMode) {
+  if (!userMember) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 font-sans relative overflow-hidden">
         {/* Glow ambient background */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 p-8 rounded-3xl text-left space-y-6 shadow-2xl relative backdrop-blur-xl">
+        <div className="max-w-sm w-full bg-slate-900/90 border border-slate-800 p-8 rounded-3xl text-left space-y-6 shadow-2xl relative backdrop-blur-xl">
           {/* Logo & Title */}
           <div className="text-center space-y-2">
             <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center font-bold text-2xl text-white shadow-xl shadow-indigo-600/30 mx-auto">
@@ -434,9 +407,6 @@ export default function App() {
             </div>
             <h2 className="text-2xl font-black text-white tracking-tight">Exven Project Manajemen</h2>
             <p className="text-xs text-indigo-400 font-semibold tracking-wider uppercase">by Kelolakan</p>
-            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed pt-1">
-              Sistem Manajemen Proyek FTTH & Pengendalian Anggaran PT. Exven Mitra Solusindo.
-            </p>
           </div>
 
           {/* Error Banner */}
@@ -459,15 +429,16 @@ export default function App() {
           <form onSubmit={handleLoginSubmit} className="space-y-4 pt-1">
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Alamat Email Perusahaan</span>
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Username</span>
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="nama@exven.co.id / kelolakan@gmail.com"
+                autoComplete="username"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="Masukkan username atau email"
                 className="w-full bg-slate-950/60 border border-slate-700/80 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
               />
             </div>
@@ -475,11 +446,12 @@ export default function App() {
             <div>
               <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Kata Sandi (Password)</span>
+                <span>Kata Sandi</span>
               </label>
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Masukkan kata sandi"
@@ -490,7 +462,7 @@ export default function App() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all duration-150 cursor-pointer mt-2"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 transition-all duration-150 cursor-pointer mt-3"
             >
               {isLoggingIn ? (
                 <>
@@ -505,67 +477,6 @@ export default function App() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Accounts Selection */}
-          <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
-            <span className="text-[11px] font-semibold text-slate-400 block text-center">
-              Pilih Akun Tim PT. Exven Mitra Solusindo (1-Click Test):
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("kelolakan@gmail.com", "admin123")}
-                className="p-2.5 bg-slate-800/60 hover:bg-indigo-950/40 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl text-left transition-all cursor-pointer"
-              >
-                <span className="font-bold text-indigo-300 block text-[11px]">👑 Kelolakan</span>
-                <span className="text-[10px] text-slate-400 block truncate">Project Director (Admin)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("hendra.sitac@exven.co.id", "exven2026")}
-                className="p-2.5 bg-slate-800/60 hover:bg-indigo-950/40 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl text-left transition-all cursor-pointer"
-              >
-                <span className="font-bold text-slate-200 block text-[11px]">📋 Hendra SITAC</span>
-                <span className="text-[10px] text-slate-400 block truncate">Manager Perizinan DKI</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("rizky.osp@exven.co.id", "exven2026")}
-                className="p-2.5 bg-slate-800/60 hover:bg-indigo-950/40 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl text-left transition-all cursor-pointer"
-              >
-                <span className="font-bold text-slate-200 block text-[11px]">🌐 Rizky OSP Lead</span>
-                <span className="text-[10px] text-slate-400 block truncate">Manager Rollout OSP</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("agus.splicer@exven.co.id", "exven2026")}
-                className="p-2.5 bg-slate-800/60 hover:bg-indigo-950/40 border border-slate-700/60 hover:border-indigo-500/50 rounded-xl text-left transition-all cursor-pointer"
-              >
-                <span className="font-bold text-slate-200 block text-[11px]">⚡ Agus Splicer</span>
-                <span className="text-[10px] text-slate-400 block truncate">Splicing & OTDR Team</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Guest Mode Option */}
-          <div className="pt-1">
-            <button
-              onClick={handleEnterDemo}
-              className="w-full bg-slate-800/40 hover:bg-slate-800/70 text-slate-400 hover:text-slate-200 border border-slate-800 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <span>Lanjutkan sebagai Tamu (Mode Offline)</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Footer Security Note */}
-          <div className="text-[10px] text-slate-500 text-center pt-2 flex items-center justify-center gap-1.5 border-t border-slate-800/60">
-            <Server className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Database Terpusat Mandiri di Server VPS (Bebas Izin Google)</span>
-          </div>
         </div>
       </div>
     );
@@ -595,10 +506,6 @@ export default function App() {
           activeProjectId={activeProjectId}
           setActiveProjectId={setActiveProjectId}
           serverConnected={serverConnected}
-          onOpenLoginModal={() => {
-            setUserMember(null);
-            setIsDemoMode(false);
-          }}
           userMember={userMember}
         />
 

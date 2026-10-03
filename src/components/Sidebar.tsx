@@ -63,11 +63,11 @@ export default function Sidebar({
         <div className="flex items-center gap-2">
           <span className={`w-2.5 h-2.5 rounded-full ${serverConnected ? "bg-emerald-500 shadow-sm shadow-emerald-500/30 animate-pulse" : "bg-amber-500"}`}></span>
           <span className="text-slate-300 font-medium">
-            {serverConnected ? "Server VPS Terhubung" : "Penyimpanan Offline"}
+            {serverConnected ? "Server VPS Terhubung" : "Server Terputus"}
           </span>
         </div>
         <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
-          {serverConnected ? "Terpusat" : "Tamu"}
+          {serverConnected ? "Online" : "Offline"}
         </span>
       </div>
 

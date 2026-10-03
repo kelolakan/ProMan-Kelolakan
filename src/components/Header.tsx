@@ -75,20 +75,9 @@ export default function Header({
             <span className="sm:hidden">Online</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-xl border border-amber-200">
-              <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-              <span>Mode Tamu</span>
-            </div>
-            {onOpenLoginModal && (
-              <button
-                onClick={onOpenLoginModal}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Masuk Akun</span>
-              </button>
-            )}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-xl border border-amber-200">
+            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>Server Offline</span>
           </div>
         )}
       </div>

@@ -34,11 +34,11 @@ export function clearStoredSession() {
 }
 
 // 1. Auth API
-export async function apiLogin(email: string, password: string): Promise<AuthSession> {
+export async function apiLogin(identifier: string, password: string): Promise<AuthSession> {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, email: identifier, username: identifier, password }),
   });
   const data = await res.json();
   if (!res.ok || !data.success) {

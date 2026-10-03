@@ -293,9 +293,19 @@ export function writeDatabase(db: AppDatabase): void {
 }
 
 // Authentication
-export function authenticateUser(email: string, passwordPlain: string): { user: Omit<StoredUser, "passwordHash">; token: string } | null {
+export function authenticateUser(identifier: string, passwordPlain: string): { user: Omit<StoredUser, "passwordHash">; token: string } | null {
   const db = readDatabase();
-  const found = db.members.find((m) => m.email.toLowerCase() === email.toLowerCase());
+  const cleanId = (identifier || "").trim().toLowerCase();
+
+  const found = db.members.find((m) => {
+    const emailLower = m.email.toLowerCase();
+    const prefix = emailLower.split("@")[0].toLowerCase();
+    return (
+      emailLower === cleanId ||
+      prefix === cleanId ||
+      (cleanId === "admin" && (emailLower.includes("kelolakan") || m.role.toLowerCase().includes("admin")))
+    );
+  });
   if (!found) return null;
 
   // Simple and safe match for internal team deployment
@@ -308,9 +318,18 @@ export function authenticateUser(email: string, passwordPlain: string): { user: 
 }
 
 // Change Password
-export function changeUserPassword(email: string, newPasswordPlain: string): boolean {
+export function changeUserPassword(identifier: string, newPasswordPlain: string): boolean {
   const db = readDatabase();
-  const idx = db.members.findIndex((m) => m.email.toLowerCase() === email.toLowerCase());
+  const cleanId = (identifier || "").trim().toLowerCase();
+  const idx = db.members.findIndex((m) => {
+    const emailLower = m.email.toLowerCase();
+    const prefix = emailLower.split("@")[0].toLowerCase();
+    return (
+      emailLower === cleanId ||
+      prefix === cleanId ||
+      (cleanId === "admin" && (emailLower.includes("kelolakan") || m.role.toLowerCase().includes("admin")))
+    );
+  });
   if (idx === -1) return false;
   db.members[idx].passwordHash = newPasswordPlain;
   writeDatabase(db);

@@ -45,14 +45,15 @@ async function startServer() {
   // 1. AUTHENTICATION ENDPOINTS
   // ==========================================
   app.post("/api/auth/login", (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email dan password wajib diisi." });
+    const { email, username, password } = req.body;
+    const identifier = (username || email || "").trim();
+    if (!identifier || !password) {
+      return res.status(400).json({ error: "Username dan password wajib diisi." });
     }
 
-    const authResult = authenticateUser(email.trim(), password);
+    const authResult = authenticateUser(identifier, password);
     if (!authResult) {
-      return res.status(401).json({ error: "Email atau password yang Anda masukkan salah." });
+      return res.status(401).json({ error: "Username atau password yang Anda masukkan salah." });
     }
 
     return res.json({
