@@ -25,6 +25,13 @@ interface DashboardModuleProps {
   transactions?: FinancialTransaction[];
 }
 
+/**
+ * FEATURE FLAG: Modul Analitik AI Gemini
+ * Saat ini dinonaktifkan (false) agar tidak muncul di antarmuka Dashboard.
+ * Jika di kemudian hari ingin diaktifkan kembali, cukup ubah nilainya menjadi `true`.
+ */
+export const ENABLE_GEMINI_AI = false;
+
 export default function DashboardModule({ projects, tasks, members, userMember, transactions = [] }: DashboardModuleProps) {
   const [aiReport, setAiReport] = useState<string>("");
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
@@ -347,100 +354,102 @@ export default function DashboardModule({ projects, tasks, members, userMember, 
         </div>
       </div>
 
-      {/* Gemini AI Performance Report Section (Manager/Admin Only) */}
-      <div className="bg-gradient-to-tr from-slate-900 to-indigo-950 p-6 rounded-3xl text-white shadow-xl shadow-indigo-950/20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
-          <div className="flex items-start gap-3.5">
-            <div className="w-11 h-11 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-yellow-400 shrink-0 shadow-inner">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base text-white tracking-tight">AI Project Consultant</h3>
-                <span className="bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                  Gemini-3.5-Flash
-                </span>
+      {/* Gemini AI Performance Report Section (Manager/Admin Only) - Diaktifkan via ENABLE_GEMINI_AI di atas */}
+      {ENABLE_GEMINI_AI && (
+        <div className="bg-gradient-to-tr from-slate-900 to-indigo-950 p-6 rounded-3xl text-white shadow-xl shadow-indigo-950/20">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-yellow-400 shrink-0 shadow-inner">
+                <Sparkles className="w-5 h-5" />
               </div>
-              <p className="text-xs text-slate-300 mt-1">
-                Gunakan kecerdasan buatan untuk menganalisis performa kerja tim bulanan secara otomatis.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base text-white tracking-tight">AI Project Consultant</h3>
+                  <span className="bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    Gemini-3.5-Flash
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Gunakan kecerdasan buatan untuk menganalisis performa kerja tim bulanan secara otomatis.
+                </p>
+              </div>
             </div>
+
+            {!isAuthorizedManager && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs p-3 rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>Maaf, modul AI Analitik ini hanya dapat diakses oleh Admin atau Project Manager.</span>
+              </div>
+            )}
           </div>
 
-          {!isAuthorizedManager && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-200 text-xs p-3 rounded-xl flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>Maaf, modul AI Analitik ini hanya dapat diakses oleh Admin atau Project Manager.</span>
+          {isAuthorizedManager && (
+            <div className="mt-5 space-y-4">
+              {/* Options Input */}
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="cth: Analisis performa tim developer, cari siapa yang paling produktif dan apa saja kendalanya..."
+                  className="flex-1 bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 focus:bg-white/10 transition-all duration-150"
+                />
+                <button
+                  onClick={handleGenerateAiReport}
+                  disabled={isLoadingAi}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shrink-0 shadow-md shadow-indigo-900/30 transition-all duration-150 cursor-pointer text-white"
+                >
+                  {isLoadingAi ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Menganalisis Data...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Mulai Analisis AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Error state */}
+              {aiError && (
+                <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-start gap-3">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-red-300">
+                    <p className="font-semibold">Kesalahan Analisis:</p>
+                    <p className="mt-0.5">{aiError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Generated Content Panel */}
+              {aiReport && (
+                <div className="bg-slate-950/50 backdrop-blur-md border border-white/10 p-6 rounded-2xl max-h-[450px] overflow-y-auto shadow-inner custom-scrollbar">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                    <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> HASIL ANALISIS REKOMENDASI BULANAN
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(aiReport);
+                        alert("Teks laporan AI berhasil disalin!");
+                      }}
+                      className="text-[10px] hover:underline text-indigo-400 hover:text-indigo-300"
+                    >
+                      Salin Laporan
+                    </button>
+                  </div>
+                  <div className="prose prose-sm prose-invert max-w-none text-slate-100 bg-white p-5 rounded-xl">
+                    {renderMarkdown(aiReport)}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {isAuthorizedManager && (
-          <div className="mt-5 space-y-4">
-            {/* Options Input */}
-            <div className="flex gap-3">
-              <input
-                type="text"
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="cth: Analisis performa tim developer, cari siapa yang paling produktif dan apa saja kendalanya..."
-                className="flex-1 bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 focus:bg-white/10 transition-all duration-150"
-              />
-              <button
-                onClick={handleGenerateAiReport}
-                disabled={isLoadingAi}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-slate-400 text-xs font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 shrink-0 shadow-md shadow-indigo-900/30 transition-all duration-150 cursor-pointer text-white"
-              >
-                {isLoadingAi ? (
-                  <>
-                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Menganalisis Data...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Mulai Analisis AI</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Error state */}
-            {aiError && (
-              <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-red-300">
-                  <p className="font-semibold">Kesalahan Analisis:</p>
-                  <p className="mt-0.5">{aiError}</p>
-                </div>
-              </div>
-            )}
-
-            {/* AI Generated Content Panel */}
-            {aiReport && (
-              <div className="bg-slate-950/50 backdrop-blur-md border border-white/10 p-6 rounded-2xl max-h-[450px] overflow-y-auto shadow-inner custom-scrollbar">
-                <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-                  <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-400" /> HASIL ANALISIS REKOMENDASI BULANAN
-                  </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(aiReport);
-                      alert("Teks laporan AI berhasil disalin!");
-                    }}
-                    className="text-[10px] hover:underline text-indigo-400 hover:text-indigo-300"
-                  >
-                    Salin Laporan
-                  </button>
-                </div>
-                <div className="prose prose-sm prose-invert max-w-none text-slate-100 bg-white p-5 rounded-xl">
-                  {renderMarkdown(aiReport)}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
