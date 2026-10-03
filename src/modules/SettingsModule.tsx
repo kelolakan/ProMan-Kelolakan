@@ -25,7 +25,8 @@ import {
   Clock,
   Percent,
   Check,
-  X
+  X,
+  FileCheck
 } from "lucide-react";
 import { SystemSettings, TeamMember, UserRole, Project, Task, FinancialTransaction } from "../types";
 import {
@@ -542,6 +543,34 @@ export default function SettingsModule({
                 <span
                   className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-xs ${
                     featureForm.enableFinanceModule ? "right-1" : "left-1"
+                  }`}
+                ></span>
+              </button>
+            </div>
+
+            {/* 1b. Modul Dokumen & Tagihan Resmi */}
+            <div className="p-5 border border-slate-200 rounded-2xl bg-slate-50/50 flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                  <FileCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Modul Dokumen & Tagihan Resmi</h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                    Penerbitan dan cetak format A4 resmi untuk Invoice Klien, Berita Acara (BAST), dan Voucher Pembayaran Vendor.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSaveFeatures({ ...featureForm, enableDocumentsModule: !(featureForm.enableDocumentsModule ?? true) })}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
+                  (featureForm.enableDocumentsModule ?? true) ? "bg-indigo-600" : "bg-slate-300"
+                }`}
+              >
+                <span
+                  className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-xs ${
+                    (featureForm.enableDocumentsModule ?? true) ? "right-1" : "left-1"
                   }`}
                 ></span>
               </button>

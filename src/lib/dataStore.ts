@@ -1,4 +1,5 @@
-import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction, ProjectStatus, TaskStatus, TaskPriority, UserRole } from "../types";
+import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction, ProjectStatus, TaskStatus, TaskPriority, UserRole, ProjectDocument } from "../types";
+import { INITIAL_DOCUMENTS } from "./documentUtils";
 
 // Default/Initial Data for PT. Exven Mitra Solusindo (FTTH Project Management)
 export const DEFAULT_MEMBERS: TeamMember[] = [
@@ -290,6 +291,7 @@ const KEYS = {
   FILES: "zonatools_local_files",
   MEMBERS: "zonatools_local_members",
   TRANSACTIONS: "zonatools_local_transactions",
+  DOCUMENTS: "zonatools_local_documents",
 };
 
 /**
@@ -309,6 +311,7 @@ export function loadLocalData() {
     files: get(KEYS.FILES, DEFAULT_FILES) as DriveFileMetadata[],
     members: get(KEYS.MEMBERS, DEFAULT_MEMBERS) as TeamMember[],
     transactions: get(KEYS.TRANSACTIONS, DEFAULT_TRANSACTIONS) as FinancialTransaction[],
+    documents: get(KEYS.DOCUMENTS, INITIAL_DOCUMENTS) as ProjectDocument[],
   };
 }
 
@@ -323,6 +326,7 @@ export function saveLocalData(data: {
   files?: DriveFileMetadata[];
   members?: TeamMember[];
   transactions?: FinancialTransaction[];
+  documents?: ProjectDocument[];
 }) {
   if (data.projects) localStorage.setItem(KEYS.PROJECTS, JSON.stringify(data.projects));
   if (data.tasks) localStorage.setItem(KEYS.TASKS, JSON.stringify(data.tasks));
@@ -331,4 +335,5 @@ export function saveLocalData(data: {
   if (data.files) localStorage.setItem(KEYS.FILES, JSON.stringify(data.files));
   if (data.members) localStorage.setItem(KEYS.MEMBERS, JSON.stringify(data.members));
   if (data.transactions) localStorage.setItem(KEYS.TRANSACTIONS, JSON.stringify(data.transactions));
+  if (data.documents) localStorage.setItem(KEYS.DOCUMENTS, JSON.stringify(data.documents));
 }

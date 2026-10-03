@@ -1,4 +1,4 @@
-import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction, SystemSettings } from "../types";
+import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction, SystemSettings, ProjectDocument } from "../types";
 
 export interface AuthSession {
   user: TeamMember;
@@ -70,6 +70,7 @@ export async function apiFetchData(): Promise<{
   files: DriveFileMetadata[];
   members: TeamMember[];
   transactions: FinancialTransaction[];
+  documents?: ProjectDocument[];
   settings?: SystemSettings;
 }> {
   const res = await fetch("/api/data");
@@ -257,6 +258,29 @@ export async function apiAdminResetDb(): Promise<void> {
   const data = await res.json();
   if (!res.ok || !data.success) {
     throw new Error(data.error || "Gagal mereset database.");
+  }
+}
+
+// 5. Project Documents API
+export async function apiSaveDocument(doc: ProjectDocument): Promise<void> {
+  const res = await fetch("/api/documents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(doc),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal menyimpan dokumen.");
+  }
+}
+
+export async function apiDeleteDocument(id: string): Promise<void> {
+  const res = await fetch(`/api/documents/${id}`, {
+    method: "DELETE",
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal menghapus dokumen.");
   }
 }
 

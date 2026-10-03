@@ -13,7 +13,8 @@ import {
   LogOut,
   KeyRound,
   Server,
-  Settings
+  Settings,
+  FileCheck
 } from "lucide-react";
 import { TeamMember, UserRole, SystemSettings } from "../types";
 
@@ -42,6 +43,7 @@ export default function Sidebar({
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, desc: "Ringkasan proyek & analitik", enabled: true },
     { id: "projects", label: "Projects", icon: Briefcase, desc: "Kelola semua proyek", enabled: true },
     { id: "finance", label: "Finance & Margin", icon: DollarSign, desc: "Kontrol anggaran & cashflow", enabled: settings ? settings.enableFinanceModule : true },
+    { id: "documents", label: "Dokumen & Tagihan", icon: FileCheck, desc: "Invoice, BAST, & Voucher", enabled: settings ? (settings.enableDocumentsModule ?? true) : true },
     { id: "kanban", label: "Kanban Board", icon: Kanban, desc: "Pantau progres tugas tim", enabled: true },
     { id: "points", label: "Riwayat Poin", icon: Award, desc: "Gamifikasi & performa tim", enabled: settings ? settings.enableGamification : true },
     { id: "team", label: "Team", icon: Users, desc: "Anggota tim & peran divisi", enabled: true },
@@ -90,19 +92,17 @@ export default function Sidebar({
             <button
               key={item.id}
               onClick={() => setCurrentTab(item.id)}
-              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-150 cursor-pointer ${
-                isActive
+              className={`w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl transition-all duration-150 cursor-pointer ${isActive
                   ? "bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
-              }`}
+                }`}
             >
               <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
               <div className="text-left">
                 <span className="text-sm block">{item.label}</span>
                 <span
-                  className={`text-[10px] block leading-tight ${
-                    isActive ? "text-indigo-200" : "text-slate-500"
-                  }`}
+                  className={`text-[10px] block leading-tight ${isActive ? "text-indigo-200" : "text-slate-500"
+                    }`}
                 >
                   {item.desc}
                 </span>

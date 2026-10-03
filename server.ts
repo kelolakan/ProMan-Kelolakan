@@ -15,6 +15,8 @@ import {
   adminDeleteMember,
   adminSaveMember,
   resetDatabaseToDefault,
+  saveProjectDocument,
+  deleteProjectDocument,
   UPLOADS_DIR,
   DB_FILE,
   StoredUser,
@@ -178,12 +180,36 @@ async function startServer() {
       files: db.files || [],
       members: safeMembers,
       transactions: db.transactions || [],
+      documents: db.documents || [],
       settings: db.settings || getSystemSettings(),
     });
   });
 
+  // ==========================================
+  // 3. PROJECT DOCUMENTS (INVOICE, BAST, VENDOR VOUCHER)
+  // ==========================================
+  app.get("/api/documents", (_req, res) => {
+    const db = readDatabase();
+    return res.json(db.documents || []);
+  });
+
+  app.post("/api/documents", (req, res) => {
+    const doc = req.body;
+    if (!doc || !doc.title || !doc.type) {
+      return res.status(400).json({ error: "Data dokumen tidak lengkap." });
+    }
+    saveProjectDocument(doc);
+    return res.json({ success: true, message: "Dokumen berhasil disimpan.", document: doc });
+  });
+
+  app.delete("/api/documents/:id", (req, res) => {
+    const { id } = req.params;
+    deleteProjectDocument(id);
+    return res.json({ success: true, message: "Dokumen berhasil dihapus." });
+  });
+
   app.post("/api/data/sync", (req, res) => {
-    const { projects, tasks, chats, timeLogs, files, members, transactions } = req.body;
+    const { projects, tasks, chats, timeLogs, files, members, transactions, documents } = req.body;
     const db = readDatabase();
 
     if (projects) db.projects = projects;
@@ -192,6 +218,7 @@ async function startServer() {
     if (timeLogs) db.timeLogs = timeLogs;
     if (files) db.files = files;
     if (transactions) db.transactions = transactions;
+    if (documents) db.documents = documents;
 
     if (members && Array.isArray(members)) {
       // Preserve existing password hashes for updated members

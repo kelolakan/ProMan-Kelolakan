@@ -112,6 +112,58 @@ export interface TeamMember {
   points: number;
 }
 
+export type DocumentType = "INVOICE" | "BAST" | "VENDOR_PAYMENT";
+
+export interface DocumentItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  amount: number;
+}
+
+export interface ProjectDocument {
+  id: string;
+  project_id: string;
+  type: DocumentType;
+  doc_number: string;
+  doc_date: string;
+  due_date?: string;
+  title: string;
+  // Recipient / Client / Vendor details
+  recipient_name: string;
+  recipient_company: string;
+  recipient_address?: string;
+  recipient_phone?: string;
+  // Financial amounts
+  subtotal: number;
+  tax_percent: number; // e.g. 0 or 11
+  tax_amount: number;
+  total_amount: number;
+  amount_in_words: string; // Terbilang
+  notes?: string;
+  // BAST specific fields
+  work_scope?: string;
+  milestone_percentage?: number;
+  atp_ref_number?: string;
+  // Vendor payment specific fields
+  payment_method?: "BANK_TRANSFER" | "CASH" | "GIRO";
+  bank_name?: string;
+  bank_account_number?: string;
+  bank_account_name?: string;
+  // Line items
+  items: DocumentItem[];
+  // Signatures
+  signer_first_name: string;
+  signer_first_title: string;
+  signer_second_name?: string;
+  signer_second_title?: string;
+  created_by: string;
+  created_at: string;
+  status: "DRAFT" | "ISSUED" | "PAID" | "COMPLETED";
+}
+
 export interface SystemSettings {
   appName: string;
   companyName: string;
@@ -120,6 +172,7 @@ export interface SystemSettings {
   standardWorkHoursPerDay: number;
   targetMarginPercent: number;
   enableFinanceModule: boolean;
+  enableDocumentsModule: boolean;
   enableGamification: boolean;
   enableMessages: boolean;
   enableFiles: boolean;
@@ -136,6 +189,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
   standardWorkHoursPerDay: 8,
   targetMarginPercent: 25,
   enableFinanceModule: true,
+  enableDocumentsModule: true,
   enableGamification: true,
   enableMessages: true,
   enableFiles: true,

@@ -17,6 +17,7 @@ import FilesModule from "./modules/FilesModule";
 import ReportsModule from "./modules/ReportsModule";
 import FinanceModule from "./modules/FinanceModule";
 import SettingsModule from "./modules/SettingsModule";
+import DocumentsModule from "./modules/DocumentsModule";
 
 import {
   Project,
@@ -29,7 +30,8 @@ import {
   UserRole,
   TaskStatus,
   SystemSettings,
-  DEFAULT_SETTINGS
+  DEFAULT_SETTINGS,
+  ProjectDocument
 } from "./types";
 
 import {
@@ -58,8 +60,12 @@ import {
   apiSaveChatMessage,
   apiSaveTimeLog,
   apiSaveMember,
-  apiSyncData
+  apiSyncData,
+  apiSaveDocument,
+  apiDeleteDocument
 } from "./lib/apiClient";
+
+import { INITIAL_DOCUMENTS } from "./lib/documentUtils";
 
 import {
   Sparkles,
@@ -101,6 +107,7 @@ export default function App() {
   const [files, setFiles] = useState<DriveFileMetadata[]>([]);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocument[]>(INITIAL_DOCUMENTS);
 
   // Active Context
   const [activeProjectId, setActiveProjectId] = useState<string>("");
@@ -119,6 +126,9 @@ export default function App() {
       setFiles(local.files);
       setMembers(local.members);
       setTransactions(local.transactions || DEFAULT_TRANSACTIONS);
+      if (local.documents) {
+        setDocuments(local.documents);
+      }
       if (local.projects.length > 0) {
         setActiveProjectId(local.projects[0].id);
       }
@@ -140,6 +150,9 @@ export default function App() {
           setFiles(serverData.files);
           setMembers(serverData.members);
           setTransactions(serverData.transactions);
+          if (serverData.documents) {
+            setDocuments(serverData.documents);
+          }
           setActiveProjectId(serverData.projects[0].id);
           if (serverData.settings) {
             setSettings(serverData.settings);
@@ -171,6 +184,7 @@ export default function App() {
       if (serverData.files) setFiles(serverData.files);
       if (serverData.members) setMembers(serverData.members);
       if (serverData.transactions) setTransactions(serverData.transactions);
+      if (serverData.documents) setDocuments(serverData.documents);
       if (serverData.settings) setSettings(serverData.settings);
       saveLocalData(serverData);
       setServerConnected(true);
@@ -210,6 +224,9 @@ export default function App() {
       setFiles(serverData.files);
       setMembers(serverData.members);
       setTransactions(serverData.transactions);
+      if (serverData.documents) {
+        setDocuments(serverData.documents);
+      }
       if (serverData.settings) {
         setSettings(serverData.settings);
       }
@@ -428,6 +445,34 @@ export default function App() {
     }
   };
 
+  const handleSaveDocument = async (newDoc: ProjectDocument) => {
+    const existingIndex = documents.findIndex((d) => d.id === newDoc.id);
+    let updated: ProjectDocument[];
+    if (existingIndex >= 0) {
+      updated = documents.map((d) => (d.id === newDoc.id ? newDoc : d));
+    } else {
+      updated = [newDoc, ...documents];
+    }
+    setDocuments(updated);
+    saveLocalData({ documents: updated });
+    try {
+      await apiSaveDocument(newDoc);
+    } catch (e) {
+      console.warn("Failed to sync document to server:", e);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    const updated = documents.filter((d) => d.id !== docId);
+    setDocuments(updated);
+    saveLocalData({ documents: updated });
+    try {
+      await apiDeleteDocument(docId);
+    } catch (e) {
+      console.warn("Failed to delete document on server:", e);
+    }
+  };
+
   // =========================================================================
   // LOGIN SCREEN (Independent Username & Password for PT. Exven Mitra Solusindo)
   // =========================================================================
@@ -581,6 +626,18 @@ export default function App() {
               onAddTransaction={handleAddTransaction}
               onDeleteTransaction={handleDeleteTransaction}
               onUpdateProjectFinance={handleUpdateProjectFinance}
+            />
+          )}
+
+          {currentTab === "documents" && (
+            <DocumentsModule
+              documents={documents}
+              projects={projects}
+              activeProjectId={activeProjectId}
+              userMember={userMember}
+              onSaveDocument={handleSaveDocument}
+              onDeleteDocument={handleDeleteDocument}
+              onRefreshData={refreshServerData}
             />
           )}
 

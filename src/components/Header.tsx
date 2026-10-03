@@ -28,6 +28,7 @@ export default function Header({
     dashboard: { title: "Dashboard Analitik", subtitle: "Ikhtisar progres proyek, performa poin, dan status pekerjaan tim." },
     projects: { title: "Daftar Proyek", subtitle: "Kelola, pantau, dan organisasikan semua inisiatif pekerjaan divisi PT. Exven Mitra Solusindo." },
     finance: { title: "Kontrol Finansial & Margin", subtitle: "Monitor nilai proyek, target margin, arus kas uang masuk/keluar, dan Kurva S finansial." },
+    documents: { title: "Dokumen & Tagihan Resmi", subtitle: "Penerbitan dan cetak Invoice Klien, BAST Proyek, dan Voucher Pembayaran Vendor." },
     kanban: { title: "Kanban Board Pekerjaan", subtitle: "Manajemen visual tugas dengan pelacakan waktu kerja tim real-time." },
     points: { title: "Riwayat Poin", subtitle: "Catatan produktivitas dan kontribusi performa tim lapangan & perizinan." },
     team: { title: "Manajemen Tim", subtitle: "Daftar anggota tim, role akses divisi, dan hak administrasi sistem." },

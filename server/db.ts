@@ -50,6 +50,7 @@ export interface AppDatabase {
   files: any[];
   members: StoredUser[];
   transactions: any[];
+  documents?: any[];
   settings?: SystemSettings;
 }
 
@@ -298,6 +299,7 @@ export function readDatabase(): AppDatabase {
         files: INITIAL_FILES,
         members: INITIAL_MEMBERS,
         transactions: INITIAL_TRANSACTIONS,
+        documents: [],
         settings: DEFAULT_SETTINGS,
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), "utf8");
@@ -307,6 +309,9 @@ export function readDatabase(): AppDatabase {
     const parsed = JSON.parse(raw);
     if (!parsed.settings) {
       parsed.settings = DEFAULT_SETTINGS;
+    }
+    if (!parsed.documents) {
+      parsed.documents = [];
     }
     return parsed;
   } catch (error) {
@@ -319,6 +324,7 @@ export function readDatabase(): AppDatabase {
       files: INITIAL_FILES,
       members: INITIAL_MEMBERS,
       transactions: INITIAL_TRANSACTIONS,
+      documents: [],
       settings: DEFAULT_SETTINGS,
     };
   }
@@ -443,8 +449,29 @@ export function resetDatabaseToDefault(): AppDatabase {
     files: INITIAL_FILES,
     members: INITIAL_MEMBERS,
     transactions: INITIAL_TRANSACTIONS,
+    documents: [],
     settings: DEFAULT_SETTINGS,
   };
   writeDatabase(initialDb);
   return initialDb;
+}
+
+// Project Documents (Invoice, BAST, Payment Voucher)
+export function saveProjectDocument(doc: any): void {
+  const db = readDatabase();
+  if (!db.documents) db.documents = [];
+  const idx = db.documents.findIndex((d) => d.id === doc.id);
+  if (idx !== -1) {
+    db.documents[idx] = doc;
+  } else {
+    db.documents.unshift(doc);
+  }
+  writeDatabase(db);
+}
+
+export function deleteProjectDocument(id: string): void {
+  const db = readDatabase();
+  if (!db.documents) return;
+  db.documents = db.documents.filter((d) => d.id !== id);
+  writeDatabase(db);
 }
