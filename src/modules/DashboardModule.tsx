@@ -144,13 +144,9 @@ export default function DashboardModule({ projects, tasks, members, userMember, 
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error("Gagal memproses laporan AI. Silakan periksa kunci API Gemini.");
-      }
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Gagal memproses laporan AI. Silakan periksa kunci API Gemini.");
       }
       setAiReport(data.analysis || "Tidak ada hasil analisis.");
     } catch (err: any) {
