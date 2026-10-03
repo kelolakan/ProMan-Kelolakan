@@ -1,4 +1,4 @@
-import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction } from "../types";
+import { Project, Task, ChatMessage, TimeLog, DriveFileMetadata, TeamMember, FinancialTransaction, SystemSettings } from "../types";
 
 export interface AuthSession {
   user: TeamMember;
@@ -70,6 +70,7 @@ export async function apiFetchData(): Promise<{
   files: DriveFileMetadata[];
   members: TeamMember[];
   transactions: FinancialTransaction[];
+  settings?: SystemSettings;
 }> {
   const res = await fetch("/api/data");
   if (!res.ok) {
@@ -176,3 +177,86 @@ export async function apiUploadFile(file: File, projectId: string, uploadedBy: s
 export async function apiDeleteFile(id: string): Promise<void> {
   await fetch(`/api/files/${id}`, { method: "DELETE" });
 }
+
+// 4. System Settings & Admin Management API
+export async function apiGetSettings(): Promise<SystemSettings> {
+  const res = await fetch("/api/settings");
+  return res.json();
+}
+
+export async function apiUpdateSettings(settings: Partial<SystemSettings>): Promise<SystemSettings> {
+  const res = await fetch("/api/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal menyimpan pengaturan.");
+  }
+  return data.settings;
+}
+
+export async function apiAdminResetPassword(email: string, newPassword: string): Promise<void> {
+  const res = await fetch("/api/admin/reset-user-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal mereset kata sandi.");
+  }
+}
+
+export async function apiAdminSaveMember(member: {
+  email: string;
+  name: string;
+  role: string;
+  division: string;
+  points?: number;
+  password?: string;
+}): Promise<void> {
+  const res = await fetch("/api/admin/save-member", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(member),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal menyimpan data anggota tim.");
+  }
+}
+
+export async function apiAdminDeleteMember(email: string): Promise<void> {
+  const res = await fetch(`/api/admin/members/${encodeURIComponent(email)}`, {
+    method: "DELETE",
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal menghapus anggota tim.");
+  }
+}
+
+export async function apiAdminRestoreDb(backupData: any): Promise<void> {
+  const res = await fetch("/api/admin/restore-db", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(backupData),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal me-restore database.");
+  }
+}
+
+export async function apiAdminResetDb(): Promise<void> {
+  const res = await fetch("/api/admin/reset-db", {
+    method: "POST",
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || "Gagal mereset database.");
+  }
+}
+

@@ -16,6 +16,7 @@ import MessagesModule from "./modules/MessagesModule";
 import FilesModule from "./modules/FilesModule";
 import ReportsModule from "./modules/ReportsModule";
 import FinanceModule from "./modules/FinanceModule";
+import SettingsModule from "./modules/SettingsModule";
 
 import {
   Project,
@@ -26,7 +27,9 @@ import {
   TeamMember,
   FinancialTransaction,
   UserRole,
-  TaskStatus
+  TaskStatus,
+  SystemSettings,
+  DEFAULT_SETTINGS
 } from "./types";
 
 import {
@@ -87,6 +90,9 @@ export default function App() {
   // Change Password Modal
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState<boolean>(false);
 
+  // Settings State
+  const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+
   // Core Datasets
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -135,6 +141,9 @@ export default function App() {
           setMembers(serverData.members);
           setTransactions(serverData.transactions);
           setActiveProjectId(serverData.projects[0].id);
+          if (serverData.settings) {
+            setSettings(serverData.settings);
+          }
 
           // Save to local cache as well
           saveLocalData(serverData);
@@ -148,6 +157,28 @@ export default function App() {
 
     initApp();
   }, []);
+
+  /**
+   * Helper to re-fetch all server data
+   */
+  const refreshServerData = async () => {
+    try {
+      const serverData = await apiFetchData();
+      if (serverData.projects) setProjects(serverData.projects);
+      if (serverData.tasks) setTasks(serverData.tasks);
+      if (serverData.chats) setChats(serverData.chats);
+      if (serverData.timeLogs) setTimeLogs(serverData.timeLogs);
+      if (serverData.files) setFiles(serverData.files);
+      if (serverData.members) setMembers(serverData.members);
+      if (serverData.transactions) setTransactions(serverData.transactions);
+      if (serverData.settings) setSettings(serverData.settings);
+      saveLocalData(serverData);
+      setServerConnected(true);
+    } catch (err) {
+      console.warn("Failed to refresh server data:", err);
+      setServerConnected(false);
+    }
+  };
 
   /**
    * Handle user login via self-hosted API
@@ -179,8 +210,14 @@ export default function App() {
       setFiles(serverData.files);
       setMembers(serverData.members);
       setTransactions(serverData.transactions);
+      if (serverData.settings) {
+        setSettings(serverData.settings);
+      }
       if (serverData.projects.length > 0) {
         setActiveProjectId(serverData.projects[0].id);
+      }
+      if (session.user.role !== UserRole.ADMIN && session.user.role !== "Admin / Division Head" && currentTab === "settings") {
+        setCurrentTab("dashboard");
       }
       saveLocalData(serverData);
     } catch (err: any) {
@@ -198,6 +235,7 @@ export default function App() {
     setUserMember(null);
     setUsernameInput("");
     setPasswordInput("");
+    setCurrentTab("dashboard");
   };
 
   /**
@@ -495,6 +533,7 @@ export default function App() {
         onLogout={handleLogout}
         serverConnected={serverConnected}
         onOpenChangePassword={() => setIsChangePasswordOpen(true)}
+        settings={settings}
       />
 
       {/* Main app workspace block */}
@@ -518,6 +557,7 @@ export default function App() {
               members={members}
               userMember={userMember}
               transactions={transactions}
+              enableGeminiAI={settings.enableGeminiAI}
             />
           )}
 
@@ -609,6 +649,19 @@ export default function App() {
               userMember={userMember}
               transactions={transactions}
               onSelectProject={setActiveProjectId}
+            />
+          )}
+
+          {currentTab === "settings" && (
+            <SettingsModule
+              settings={settings}
+              onUpdateSettings={(newSet) => setSettings(newSet)}
+              userMember={userMember}
+              members={members}
+              onRefreshData={refreshServerData}
+              projects={projects}
+              tasks={tasks}
+              transactions={transactions}
             />
           )}
         </main>

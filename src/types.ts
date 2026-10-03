@@ -111,3 +111,35 @@ export interface TeamMember {
   division: string;
   points: number;
 }
+
+export interface SystemSettings {
+  appName: string;
+  companyName: string;
+  providerName: string;
+  tagline: string;
+  standardWorkHoursPerDay: number;
+  targetMarginPercent: number;
+  enableFinanceModule: boolean;
+  enableGamification: boolean;
+  enableMessages: boolean;
+  enableFiles: boolean;
+  enableReports: boolean;
+  enableGeminiAI: boolean;
+  geminiApiKey?: string;
+}
+
+export const DEFAULT_SETTINGS: SystemSettings = {
+  appName: "Exven Project Manajemen",
+  companyName: "PT. Exven Mitra Solusindo",
+  providerName: "Kelolakan",
+  tagline: "Sistem Manajemen Proyek FTTH & Pengendalian Anggaran",
+  standardWorkHoursPerDay: 8,
+  targetMarginPercent: 25,
+  enableFinanceModule: true,
+  enableGamification: true,
+  enableMessages: true,
+  enableFiles: true,
+  enableReports: true,
+  enableGeminiAI: false,
+  geminiApiKey: "",
+};

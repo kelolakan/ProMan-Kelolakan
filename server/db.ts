@@ -10,6 +10,38 @@ export interface StoredUser {
   passwordHash: string; // Plain or hashed string
 }
 
+export interface SystemSettings {
+  appName: string;
+  companyName: string;
+  providerName: string;
+  tagline: string;
+  standardWorkHoursPerDay: number;
+  targetMarginPercent: number;
+  enableFinanceModule: boolean;
+  enableGamification: boolean;
+  enableMessages: boolean;
+  enableFiles: boolean;
+  enableReports: boolean;
+  enableGeminiAI: boolean;
+  geminiApiKey?: string;
+}
+
+export const DEFAULT_SETTINGS: SystemSettings = {
+  appName: "Exven Project Manajemen",
+  companyName: "PT. Exven Mitra Solusindo",
+  providerName: "Kelolakan",
+  tagline: "Sistem Manajemen Proyek FTTH & Pengendalian Anggaran",
+  standardWorkHoursPerDay: 8,
+  targetMarginPercent: 25,
+  enableFinanceModule: true,
+  enableGamification: true,
+  enableMessages: true,
+  enableFiles: true,
+  enableReports: true,
+  enableGeminiAI: false,
+  geminiApiKey: "",
+};
+
 export interface AppDatabase {
   projects: any[];
   tasks: any[];
@@ -18,10 +50,11 @@ export interface AppDatabase {
   files: any[];
   members: StoredUser[];
   transactions: any[];
+  settings?: SystemSettings;
 }
 
 const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "database.json");
+export const DB_FILE = path.join(DATA_DIR, "database.json");
 export const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 
 // Ensure required directories exist
@@ -265,12 +298,17 @@ export function readDatabase(): AppDatabase {
         files: INITIAL_FILES,
         members: INITIAL_MEMBERS,
         transactions: INITIAL_TRANSACTIONS,
+        settings: DEFAULT_SETTINGS,
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), "utf8");
       return initialDb;
     }
     const raw = fs.readFileSync(DB_FILE, "utf8");
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed.settings) {
+      parsed.settings = DEFAULT_SETTINGS;
+    }
+    return parsed;
   } catch (error) {
     console.error("Error reading database.json, returning fallback:", error);
     return {
@@ -281,6 +319,7 @@ export function readDatabase(): AppDatabase {
       files: INITIAL_FILES,
       members: INITIAL_MEMBERS,
       transactions: INITIAL_TRANSACTIONS,
+      settings: DEFAULT_SETTINGS,
     };
   }
 }
@@ -334,4 +373,78 @@ export function changeUserPassword(identifier: string, newPasswordPlain: string)
   db.members[idx].passwordHash = newPasswordPlain;
   writeDatabase(db);
   return true;
+}
+
+// System Settings
+export function getSystemSettings(): SystemSettings {
+  const db = readDatabase();
+  return db.settings || DEFAULT_SETTINGS;
+}
+
+export function updateSystemSettings(newSettings: Partial<SystemSettings>): SystemSettings {
+  const db = readDatabase();
+  db.settings = { ...(db.settings || DEFAULT_SETTINGS), ...newSettings };
+  writeDatabase(db);
+  return db.settings;
+}
+
+// Admin: Reset any user password
+export function adminResetUserPassword(targetEmail: string, newPasswordPlain: string): boolean {
+  const db = readDatabase();
+  const cleanEmail = (targetEmail || "").trim().toLowerCase();
+  const idx = db.members.findIndex((m) => m.email.toLowerCase() === cleanEmail);
+  if (idx === -1) return false;
+  db.members[idx].passwordHash = newPasswordPlain;
+  writeDatabase(db);
+  return true;
+}
+
+// Admin: Delete user
+export function adminDeleteMember(targetEmail: string): boolean {
+  const db = readDatabase();
+  const cleanEmail = (targetEmail || "").trim().toLowerCase();
+  if (cleanEmail === "kelolakan@gmail.com") return false; // Master admin safeguard
+  db.members = db.members.filter((m) => m.email.toLowerCase() !== cleanEmail);
+  writeDatabase(db);
+  return true;
+}
+
+// Admin: Add or update user with password
+export function adminSaveMember(member: StoredUser): boolean {
+  const db = readDatabase();
+  const cleanEmail = member.email.trim().toLowerCase();
+  const idx = db.members.findIndex((m) => m.email.toLowerCase() === cleanEmail);
+  if (idx !== -1) {
+    db.members[idx] = {
+      ...db.members[idx],
+      name: member.name || db.members[idx].name,
+      role: member.role || db.members[idx].role,
+      division: member.division || db.members[idx].division,
+      points: member.points !== undefined ? member.points : db.members[idx].points,
+      passwordHash: member.passwordHash ? member.passwordHash : db.members[idx].passwordHash,
+    };
+  } else {
+    db.members.push({
+      ...member,
+      passwordHash: member.passwordHash || "exven2026",
+    });
+  }
+  writeDatabase(db);
+  return true;
+}
+
+// Reset Database to Initial
+export function resetDatabaseToDefault(): AppDatabase {
+  const initialDb: AppDatabase = {
+    projects: INITIAL_PROJECTS,
+    tasks: INITIAL_TASKS,
+    chats: INITIAL_CHATS,
+    timeLogs: INITIAL_TIME_LOGS,
+    files: INITIAL_FILES,
+    members: INITIAL_MEMBERS,
+    transactions: INITIAL_TRANSACTIONS,
+    settings: DEFAULT_SETTINGS,
+  };
+  writeDatabase(initialDb);
+  return initialDb;
 }

@@ -9,7 +9,14 @@ import {
   writeDatabase,
   authenticateUser,
   changeUserPassword,
+  getSystemSettings,
+  updateSystemSettings,
+  adminResetUserPassword,
+  adminDeleteMember,
+  adminSaveMember,
+  resetDatabaseToDefault,
   UPLOADS_DIR,
+  DB_FILE,
   StoredUser,
 } from "./server/db";
 
@@ -83,8 +90,82 @@ async function startServer() {
   });
 
   // ==========================================
-  // 2. CENTRALIZED DATABASE SYNC ENDPOINTS
+  // 2. CENTRALIZED DATABASE SYNC & SETTINGS
   // ==========================================
+  app.get("/api/settings", (_req, res) => {
+    return res.json(getSystemSettings());
+  });
+
+  app.post("/api/settings", (req, res) => {
+    const updated = updateSystemSettings(req.body);
+    return res.json({ success: true, settings: updated });
+  });
+
+  // Admin: Reset user password directly
+  app.post("/api/admin/reset-user-password", (req, res) => {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: "Email dan password baru wajib diisi." });
+    }
+    const success = adminResetUserPassword(email, newPassword);
+    if (!success) {
+      return res.status(404).json({ error: "Pengguna tidak ditemukan." });
+    }
+    return res.json({ success: true, message: `Password akun ${email} berhasil direset.` });
+  });
+
+  // Admin: Add or update member with custom password
+  app.post("/api/admin/save-member", (req, res) => {
+    const { email, name, role, division, points, password } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ error: "Email dan nama wajib diisi." });
+    }
+    const member: StoredUser = {
+      email,
+      name,
+      role: role || "Team Member",
+      division: division || "General",
+      points: points || 0,
+      passwordHash: password || "exven2026",
+    };
+    adminSaveMember(member);
+    return res.json({ success: true, message: "Data anggota tim berhasil disimpan." });
+  });
+
+  // Admin: Delete member
+  app.delete("/api/admin/members/:email", (req, res) => {
+    const { email } = req.params;
+    if (email.toLowerCase() === "kelolakan@gmail.com") {
+      return res.status(403).json({ error: "Akun Super Admin utama tidak dapat dihapus." });
+    }
+    const success = adminDeleteMember(email);
+    if (!success) {
+      return res.status(404).json({ error: "Anggota tim tidak ditemukan." });
+    }
+    return res.json({ success: true, message: "Anggota tim berhasil dihapus." });
+  });
+
+  // Admin: Download database JSON backup
+  app.get("/api/admin/backup-db", (_req, res) => {
+    res.download(DB_FILE, `exven-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  });
+
+  // Admin: Restore database from JSON
+  app.post("/api/admin/restore-db", (req, res) => {
+    const data = req.body;
+    if (!data || !Array.isArray(data.projects) || !Array.isArray(data.members)) {
+      return res.status(400).json({ error: "Format file backup JSON tidak valid." });
+    }
+    writeDatabase(data);
+    return res.json({ success: true, message: "Database berhasil direstore dari file backup." });
+  });
+
+  // Admin: Reset database to initial factory settings
+  app.post("/api/admin/reset-db", (_req, res) => {
+    const resetDb = resetDatabaseToDefault();
+    return res.json({ success: true, message: "Database berhasil direset ke konfigurasi awal.", data: resetDb });
+  });
+
   app.get("/api/data", (_req, res) => {
     const db = readDatabase();
     // Return members without sensitive password hashes
@@ -97,6 +178,7 @@ async function startServer() {
       files: db.files || [],
       members: safeMembers,
       transactions: db.transactions || [],
+      settings: db.settings || getSystemSettings(),
     });
   });
 

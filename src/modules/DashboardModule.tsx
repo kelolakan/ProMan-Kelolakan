@@ -23,20 +23,25 @@ interface DashboardModuleProps {
   members: TeamMember[];
   userMember: TeamMember | null;
   transactions?: FinancialTransaction[];
+  enableGeminiAI?: boolean;
 }
 
-/**
- * FEATURE FLAG: Modul Analitik AI Gemini
- * Saat ini dinonaktifkan (false) agar tidak muncul di antarmuka Dashboard.
- * Jika di kemudian hari ingin diaktifkan kembali, cukup ubah nilainya menjadi `true`.
- */
 export const ENABLE_GEMINI_AI = false;
 
-export default function DashboardModule({ projects, tasks, members, userMember, transactions = [] }: DashboardModuleProps) {
+export default function DashboardModule({
+  projects,
+  tasks,
+  members,
+  userMember,
+  transactions = [],
+  enableGeminiAI = false
+}: DashboardModuleProps) {
   const [aiReport, setAiReport] = useState<string>("");
   const [isLoadingAi, setIsLoadingAi] = useState<boolean>(false);
   const [aiPrompt, setAiPrompt] = useState<string>("");
   const [aiError, setAiError] = useState<string>("");
+
+  const isAiActive = enableGeminiAI || ENABLE_GEMINI_AI;
 
   const isAuthorizedManager =
     userMember?.role === UserRole.ADMIN || userMember?.role === UserRole.MANAGER;
@@ -354,8 +359,8 @@ export default function DashboardModule({ projects, tasks, members, userMember, 
         </div>
       </div>
 
-      {/* Gemini AI Performance Report Section (Manager/Admin Only) - Diaktifkan via ENABLE_GEMINI_AI di atas */}
-      {ENABLE_GEMINI_AI && (
+      {/* Gemini AI Performance Report Section (Manager/Admin Only) - Diaktifkan via Pengaturan Sistem */}
+      {isAiActive && (
         <div className="bg-gradient-to-tr from-slate-900 to-indigo-950 p-6 rounded-3xl text-white shadow-xl shadow-indigo-950/20">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
             <div className="flex items-start gap-3.5">

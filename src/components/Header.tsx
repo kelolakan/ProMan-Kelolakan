@@ -34,6 +34,7 @@ export default function Header({
     messages: { title: "Diskusi Kolaborasi", subtitle: "Komunikasi dan koordinasi langsung di dalam tim proyek internal." },
     files: { title: "File & Dokumentasi", subtitle: "Unggah dokumen perizinan, kurva S, dan foto lapangan ke server." },
     scurve: { title: "Laporan Kurva S", subtitle: "Visualisasi perbandingan kemajuan rencana terhadap realisasi aktual." },
+    settings: { title: "Pengaturan Sistem", subtitle: "Konfigurasi identitas aplikasi, kontrol visibilitas modul, dan backup database (Khusus Super Admin)." },
   };
 
   const activeTitle = tabTitles[currentTab] || { title: "Exven Project Management", subtitle: "Sistem Manajemen Proyek Mandiri" };

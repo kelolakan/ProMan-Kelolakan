@@ -12,9 +12,10 @@ import {
   Shield,
   LogOut,
   KeyRound,
-  Server
+  Server,
+  Settings
 } from "lucide-react";
-import { TeamMember, UserRole } from "../types";
+import { TeamMember, UserRole, SystemSettings } from "../types";
 
 interface SidebarProps {
   currentTab: string;
@@ -23,6 +24,7 @@ interface SidebarProps {
   onLogout: () => void;
   serverConnected?: boolean;
   onOpenChangePassword?: () => void;
+  settings?: SystemSettings;
 }
 
 export default function Sidebar({
@@ -32,18 +34,24 @@ export default function Sidebar({
   onLogout,
   serverConnected = true,
   onOpenChangePassword,
+  settings,
 }: SidebarProps) {
-  const menuItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, desc: "Ringkasan proyek & analitik" },
-    { id: "projects", label: "Projects", icon: Briefcase, desc: "Kelola semua proyek" },
-    { id: "finance", label: "Finance & Margin", icon: DollarSign, desc: "Kontrol anggaran & cashflow" },
-    { id: "kanban", label: "Kanban Board", icon: Kanban, desc: "Pantau progres tugas tim" },
-    { id: "points", label: "Riwayat Poin", icon: Award, desc: "Gamifikasi & performa tim" },
-    { id: "team", label: "Team", icon: Users, desc: "Anggota tim & peran divisi" },
-    { id: "messages", label: "Messages", icon: MessageSquare, desc: "Chat real-time kolaborasi" },
-    { id: "files", label: "Files", icon: Folder, desc: "Penyimpanan berkas proyek" },
-    { id: "scurve", label: "S-Curve Reports", icon: TrendingUp, desc: "Analisis rencana vs realisasi" },
+  const isAdmin = userMember?.role === UserRole.ADMIN || userMember?.role === "Admin / Division Head";
+
+  const allMenuItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, desc: "Ringkasan proyek & analitik", enabled: true },
+    { id: "projects", label: "Projects", icon: Briefcase, desc: "Kelola semua proyek", enabled: true },
+    { id: "finance", label: "Finance & Margin", icon: DollarSign, desc: "Kontrol anggaran & cashflow", enabled: settings ? settings.enableFinanceModule : true },
+    { id: "kanban", label: "Kanban Board", icon: Kanban, desc: "Pantau progres tugas tim", enabled: true },
+    { id: "points", label: "Riwayat Poin", icon: Award, desc: "Gamifikasi & performa tim", enabled: settings ? settings.enableGamification : true },
+    { id: "team", label: "Team", icon: Users, desc: "Anggota tim & peran divisi", enabled: true },
+    { id: "messages", label: "Messages", icon: MessageSquare, desc: "Chat real-time kolaborasi", enabled: settings ? settings.enableMessages : true },
+    { id: "files", label: "Files", icon: Folder, desc: "Penyimpanan berkas proyek", enabled: settings ? settings.enableFiles : true },
+    { id: "scurve", label: "S-Curve Reports", icon: TrendingUp, desc: "Analisis rencana vs realisasi", enabled: settings ? settings.enableReports : true },
+    { id: "settings", label: "Pengaturan", icon: Settings, desc: "Kontrol admin & sistem", enabled: isAdmin },
   ];
+
+  const menuItems = allMenuItems.filter((item) => item.enabled);
 
   return (
     <aside className="w-72 bg-slate-900 text-slate-100 flex flex-col border-r border-slate-800">
@@ -53,8 +61,10 @@ export default function Sidebar({
           EX
         </div>
         <div className="min-w-0">
-          <h1 className="font-bold text-base tracking-tight text-white truncate leading-snug">Exven Project</h1>
-          <p className="text-xs text-indigo-400 font-medium">by Kelolakan</p>
+          <h1 className="font-bold text-base tracking-tight text-white truncate leading-snug">
+            {settings?.appName || "Exven Project"}
+          </h1>
+          <p className="text-xs text-indigo-400 font-medium">by {settings?.providerName || "Kelolakan"}</p>
         </div>
       </div>
 
