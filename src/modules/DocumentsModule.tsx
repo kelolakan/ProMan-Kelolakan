@@ -25,11 +25,17 @@ import {
   Sparkles,
   Calendar,
   User,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  FileUp,
+  Loader2,
+  Wand2,
+  CheckCheck,
+  Info,
 } from "lucide-react";
 import { Project, ProjectDocument, DocumentType, DocumentItem, TeamMember, UserRole } from "../types";
 import { formatIDR, terbilang, generateDocNumber, INITIAL_DOCUMENTS } from "../lib/documentUtils";
-
+import { parseDocumentFile, type ParsedDocumentResult } from "../lib/documentParser";
 interface DocumentsModuleProps {
   projects: Project[];
   activeProjectId: string;
@@ -118,7 +124,11 @@ export default function DocumentsModule({
   const [docStatus, setDocStatus] = useState<"DRAFT" | "ISSUED" | "PAID" | "COMPLETED">("ISSUED");
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-
+  const [isParsing, setIsParsing] = useState<boolean>(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parsedPreview, setParsedPreview] = useState<ParsedDocumentResult | null>(null);
+  const [parsedFileName, setParsedFileName] = useState<string>("");
+  const [showParsedDetail, setShowParsedDetail] = useState<boolean>(false);
   // Calculations for current form
   const formSubtotal = useMemo(() => {
     return items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
@@ -177,6 +187,7 @@ export default function DocumentsModule({
 
   // Handle open editor for new document
   const handleOpenCreateModal = (type: DocumentType = "INVOICE") => {
+    resetParserPanel(); 
     setEditingDocId(null);
     setDocType(type);
     setDocProjectId(activeProjectId || (projects[0]?.id ?? ""));
@@ -283,6 +294,7 @@ export default function DocumentsModule({
 
   // Handle edit existing document
   const handleOpenEditModal = (doc: ProjectDocument) => {
+    resetParserPanel();
     setEditingDocId(doc.id);
     setDocType(doc.type);
     setDocProjectId(doc.project_id);
@@ -420,6 +432,80 @@ export default function DocumentsModule({
     return p ? p.name : "Proyek FTTH";
   };
 
+const applyParsedData = (parsed: ParsedDocumentResult) => {
+  if (parsed.doc_type) setDocType(parsed.doc_type);
+  if (parsed.doc_number) setDocNumber(parsed.doc_number);
+  if (parsed.doc_date) setDocDate(parsed.doc_date);
+  if (parsed.due_date) setDueDate(parsed.due_date);
+  if (parsed.title) setTitle(parsed.title);
+  if (parsed.recipient_name) setRecipientName(parsed.recipient_name);
+  if (parsed.recipient_company) setRecipientCompany(parsed.recipient_company);
+  if (parsed.recipient_address) setRecipientAddress(parsed.recipient_address);
+  if (parsed.recipient_phone) setRecipientPhone(parsed.recipient_phone);
+  if (parsed.notes) setNotes(parsed.notes);
+  if (typeof parsed.include_tax === "boolean") setIncludeTax(parsed.include_tax);
+
+  // BAST-specific
+  if (parsed.work_scope) setWorkScope(parsed.work_scope);
+  if (typeof parsed.milestone_percentage === "number")
+    setMilestonePct(parsed.milestone_percentage);
+  if (parsed.atp_ref_number) setAtpRefNumber(parsed.atp_ref_number);
+
+  // Vendor-specific
+  if (parsed.payment_method) setPaymentMethod(parsed.payment_method);
+  if (parsed.bank_name) setBankName(parsed.bank_name);
+  if (parsed.bank_account_number) setBankAccountNumber(parsed.bank_account_number);
+  if (parsed.bank_account_name) setBankAccountName(parsed.bank_account_name);
+
+  // Items — hanya timpa jika hasil parsing punya items
+  if (parsed.items && parsed.items.length > 0) {
+    setItems(parsed.items);
+  }
+};
+
+const handleSmartUpload = async (file: File) => {
+  setIsParsing(true);
+  setParseError(null);
+  setParsedPreview(null);
+  setParsedFileName(file.name);
+
+  try {
+    const parsed = await parseDocumentFile(file, docType);
+    setParsedPreview(parsed);
+    applyParsedData(parsed);
+  } catch (err: any) {
+    setParseError(err?.message || "Gagal memproses dokumen.");
+  } finally {
+    setIsParsing(false);
+  }
+};
+
+// Handler input change
+const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  // validasi ekstensi
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  if (!["pdf", "docx", "doc", "txt"].includes(ext)) {
+    setParseError("Format tidak didukung. Gunakan PDF, DOCX, atau TXT.");
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    setParseError("Ukuran file maksimal 10MB.");
+    return;
+  }
+  void handleSmartUpload(file);
+  // reset input supaya bisa upload file yang sama dua kali
+  e.target.value = "";
+};
+
+// Reset panel parsing saat modal dibuka/tutup
+const resetParserPanel = () => {
+  setParsedPreview(null);
+  setParseError(null);
+  setParsedFileName("");
+  setShowParsedDetail(false);
+};
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* Top Banner Header */}
@@ -736,7 +822,7 @@ export default function DocumentsModule({
                 </div>
               </div>
               <button
-                onClick={() => setIsEditorOpen(false)}
+                onClick={() => {setIsEditorOpen(false); resetParserPanel();}}
                 className="text-slate-400 hover:text-slate-600 p-1.5 cursor-pointer rounded-lg hover:bg-slate-100"
               >
                 <X className="w-5 h-5" />
@@ -744,6 +830,151 @@ export default function DocumentsModule({
             </div>
 
             <form onSubmit={handleSubmitDocument} className="space-y-6 pt-5">
+              {!editingDocId && (
+                <div className="p-4 bg-gradient-to-br from-violet-50 via-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      {/* <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/30">
+                        <Wand2 className="w-4.5 h-4.5" />
+                      </div> */}
+                      <div>
+                        <h3 className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                          Smart Auto-Fill
+                          {/* <Sparkles className="w-3 h-3 text-violet-600" /> */}
+                        </h3>
+                        <p className="text-[11px] text-indigo-700/80 mt-0.5">
+                          Upload PO, Invoice lama, atau Kontrak — form akan terisi otomatis.
+                        </p>
+                      </div>
+                    </div>
+
+                    {parsedPreview && (
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                        <CheckCheck className="w-3 h-3" />
+                        Auto-filled
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Drop zone */}
+                  <label
+                    htmlFor="smart-upload-input"
+                    className={`flex flex-col items-center justify-center gap-2 w-full py-5 px-4 border-2 border-dashed rounded-xl transition-all cursor-pointer ${
+                      isParsing
+                        ? "border-indigo-400 bg-white/60 pointer-events-none"
+                        : "border-indigo-300 hover:border-indigo-500 hover:bg-white/70 bg-white/40"
+                    }`}
+                  >
+                    {isParsing ? (
+                      <>
+                        <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                        <span className="text-xs font-bold text-indigo-700">
+                          Menganalisis {parsedFileName || "dokumen"}...
+                        </span>
+                        <span className="text-[10px] text-indigo-500">Mohon tunggu sebentar</span>
+                      </>
+                    ) : (
+                      <>
+                        <FileUp className="w-6 h-6 text-indigo-600" />
+                        <span className="text-xs font-bold text-indigo-800">
+                          Klik untuk upload / drop file di sini
+                        </span>
+                        <span className="text-[10px] text-indigo-500">
+                          Format: PDF, DOCX, atau TXT (maks 10MB)
+                        </span>
+                      </>
+                    )}
+                    <input
+                      id="smart-upload-input"
+                      type="file"
+                      accept=".pdf,.docx,.doc,.txt"
+                      className="hidden"
+                      onChange={handleFileInputChange}
+                      disabled={isParsing}
+                    />
+                  </label>
+
+                  {/* Error */}
+                  {parseError && (
+                    <div className="flex items-start gap-2 p-2.5 bg-red-50 border border-red-200 rounded-xl">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                      <span className="text-[11px] text-red-700 font-medium">{parseError}</span>
+                    </div>
+                  )}
+
+                  {/* Preview hasil parsing */}
+                  {parsedPreview && (
+                    <div className="p-3 bg-white border border-indigo-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                          <Info className="w-3 h-3 text-indigo-600" />
+                          Berhasil ekstrak data
+                        </span>
+                        {/* {typeof parsedPreview.confidence === "number" && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">
+                            Confidence: {Math.round(parsedPreview.confidence * 100)}%
+                          </span>
+                        )} */}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                        {parsedPreview.doc_number && (
+                          <div className="truncate">
+                            <span className="text-slate-400">No:</span>{" "}
+                            <span className="font-semibold text-slate-800">{parsedPreview.doc_number}</span>
+                          </div>
+                        )}
+                        {parsedPreview.recipient_company && (
+                          <div className="truncate">
+                            <span className="text-slate-400">Penerima:</span>{" "}
+                            <span className="font-semibold text-slate-800">
+                              {parsedPreview.recipient_company}
+                            </span>
+                          </div>
+                        )}
+                        {parsedPreview.items && (
+                          <div>
+                            <span className="text-slate-400">Items:</span>{" "}
+                            <span className="font-semibold text-slate-800">
+                              {parsedPreview.items.length} baris
+                            </span>
+                          </div>
+                        )}
+                        {parsedPreview.doc_date && (
+                          <div>
+                            <span className="text-slate-400">Tanggal:</span>{" "}
+                            <span className="font-semibold text-slate-800">{parsedPreview.doc_date}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowParsedDetail((v) => !v)}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        {showParsedDetail ? "Sembunyikan detail" : "Lihat detail teks mentah"}
+                        <ChevronDown className={`w-3 h-3 transition-transform ${showParsedDetail ? "rotate-180" : ""}`} />
+                      </button>
+
+                      {showParsedDetail && parsedPreview.raw_text_preview && (
+                        <pre className="text-[10px] text-slate-600 bg-slate-50 border border-slate-200 rounded-lg p-2 max-h-32 overflow-auto whitespace-pre-wrap font-mono">
+                          {parsedPreview.raw_text_preview}
+                        </pre>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => applyParsedData(parsedPreview)}
+                        className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Wand2 className="w-3 h-3" />
+                        Terapkan Ulang ke Form
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Step 1: Select Type */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">Pilih Jenis Dokumen:</label>
