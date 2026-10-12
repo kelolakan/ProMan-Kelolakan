@@ -4,6 +4,7 @@ import fs from "fs";
 import multer from "multer";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
 import {
   readDatabase,
   writeDatabase,
@@ -26,7 +27,7 @@ dotenv.config();
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || 4000;
 
   app.use(express.json({ limit: "25mb" }));
   app.use(express.urlencoded({ extended: true, limit: "25mb" }));
@@ -206,6 +207,83 @@ async function startServer() {
     const { id } = req.params;
     deleteProjectDocument(id);
     return res.json({ success: true, message: "Dokumen berhasil dihapus." });
+  });
+
+  app.post("/api/parse-document", async (req, res) => {
+    try {
+      const { text, preferredType } = req.body || {};
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Field 'text' wajib diisi." });
+      }
+
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.warn("[Parse] GEMINI_API_KEY kosong → fallback ke heuristik di frontend.");
+        // 204 = No Content → frontend otomatis fallback ke parseHeuristics
+        return res.status(204).end();
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+
+      const prompt = `Anda adalah ekstraktor dokumen bisnis Indonesia (Invoice, BAST, Voucher Pembayaran, Purchase Order).
+Tugas: ekstrak data dari teks dokumen menjadi JSON valid.
+Balas HANYA JSON, tanpa markdown, tanpa penjelasan tambahan.
+
+Skema JSON yang harus diisi (hilangkan key yang tidak ada di dokumen):
+{
+  "doc_type": "INVOICE" | "BAST" | "VENDOR_PAYMENT",
+  "doc_number": string,
+  "doc_date": "YYYY-MM-DD",
+  "due_date": "YYYY-MM-DD",
+  "title": string,
+  "recipient_name": string,
+  "recipient_company": string,
+  "recipient_address": string,
+  "recipient_phone": string,
+  "items": [{"description": string, "quantity": number, "unit": string, "unit_price": number, "amount": number}],
+  "include_tax": boolean,
+  "notes": string,
+  "work_scope": string,
+  "milestone_percentage": number,
+  "atp_ref_number": string,
+  "payment_method": "BANK_TRANSFER" | "CASH" | "GIRO",
+  "bank_name": string,
+  "bank_account_number": string,
+  "bank_account_name": string,
+  "confidence": number
+}
+
+Aturan:
+- Semua angka rupiah dalam bentuk number (tanpa titik/koma).
+- Tanggal format YYYY-MM-DD.
+- doc_type default "INVOICE" jika tidak jelas.
+- confidence: 0.0 sampai 1.0 sesuai keyakinan.
+${preferredType ? `- Tipe yang diharapkan dari UI: ${preferredType}` : ""}
+
+TEKS DOKUMEN:
+${text.slice(0, 15000)}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: prompt,
+        config: { responseMimeType: "application/json" },
+      });
+
+      const jsonText = response.text || "{}";
+      let parsed: any;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch (parseErr) {
+        console.error("[Parse] Gemini bukan JSON valid:", jsonText.slice(0, 200));
+        return res.status(204).end(); // fallback ke heuristik
+      }
+
+      return res.json(parsed);
+    } catch (err: any) {
+      console.error("[Parse] Error:", err?.message || err);
+      // Return 204 supaya frontend tidak crash, langsung fallback ke heuristik
+      return res.status(204).end();
+    }
   });
 
   app.post("/api/data/sync", (req, res) => {
