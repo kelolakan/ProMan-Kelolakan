@@ -146,7 +146,7 @@ export default function DocumentsModule({
     return terbilang(formTotal);
   }, [formTotal]);
 
-  // Filtered Documents
+  // Dokumen terfilter
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
       const matchType = filterType === "ALL" || doc.type === filterType;
