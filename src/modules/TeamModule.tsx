@@ -7,10 +7,10 @@ interface TeamModuleProps {
   userMember: TeamMember | null;
   onAddMember: (member: TeamMember) => void;
   onUpdateRole: (email: string, role: UserRole, division: string) => void;
-  onDeleteMember: (email: string) => void; 
+  // onDeleteMember: (email: string) => void; 
 }
 
-export default function TeamModule({ members, userMember, onAddMember, onUpdateRole, onDeleteMember }: TeamModuleProps) {
+export default function TeamModule({ members, userMember, onAddMember, onUpdateRole}: TeamModuleProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");

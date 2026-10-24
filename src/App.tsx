@@ -64,7 +64,7 @@ import {
   apiSyncData,
   apiSaveDocument,
   apiDeleteDocument,
-  apiDeleteMember
+  // apiDeleteMember
 } from "./lib/apiClient";
 
 import { INITIAL_DOCUMENTS } from "./lib/documentUtils";
@@ -731,7 +731,6 @@ export default function App() {
               userMember={userMember}
               onAddMember={handleAddMember}
               onUpdateRole={handleUpdateRole}
-              onDeleteMember={handleDeleteMember}
             />
           )}
 
