@@ -1759,8 +1759,8 @@ const resetParserPanel = () => {
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-2">
                        {/* Placeholder Logo CSA */}
-                       <div className="text-3xl font-black text-blue-900 tracking-tighter">CSA</div>
-                       <div className="text-[8px] leading-tight text-blue-900 font-semibold max-w-[80px]">Ciptajaya Sejahtera Abadi</div>
+                       <div className="text-3xl font-black text-blue-900 tracking-tighter">Logo</div>
+                       <div className="text-[8px] leading-tight text-blue-900 font-semibold max-w-[80px]">{previewDoc.recipient_company}</div>
                     </div>
                     <div className="text-xs text-slate-700">PM.01.01-HR/Rev.00</div>
                   </div>
@@ -1855,7 +1855,7 @@ const resetParserPanel = () => {
 
                   {/* Footer CSA */}
                   <div className="mt-16 text-center text-[10px] text-slate-500">
-                    © 2023 All Rights Reserved - PT. CIPTAJAYA SEJAHTERA ABADI
+                    © 2026 All Rights Reserved - {previewDoc.recipient_company}
                   </div>
                 </div>
               )}
