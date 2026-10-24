@@ -211,6 +211,7 @@ export default function TeamModule({ members, userMember, onAddMember, onUpdateR
                     <span className="text-[10px] text-gray-400 truncate block">{member.email}</span>
                   </div>
                   {/* TOMBOL HAPUS BARU */}
+                  {/*
                   {canDeleteMember(member) && (
                     <button
                       onClick={() => handleDeleteClick(member)}
@@ -220,6 +221,7 @@ export default function TeamModule({ members, userMember, onAddMember, onUpdateR
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
+                    */}
                 </div>
 
                 {/* Info block */}
