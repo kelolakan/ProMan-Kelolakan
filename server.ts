@@ -250,7 +250,15 @@ Skema JSON yang harus diisi (hilangkan key yang tidak ada di dokumen):
   "bank_name": string,
   "bank_account_number": string,
   "bank_account_name": string,
-  "confidence": number
+  "confidence": number,
+  // Optional fields for additional metadata
+  "site_name": string,
+  "product_type": string,
+  "regional_site": string,
+  "po_number": string,
+  "po_date": "YYYY-MM-DD",
+  "ship_to_company": string,
+  "ship_to_address": string
 }
 
 Aturan:

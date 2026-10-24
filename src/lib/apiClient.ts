@@ -284,3 +284,33 @@ export async function apiDeleteDocument(id: string): Promise<void> {
   }
 }
 
+// export async function apiDeleteMember(email: string): Promise<void> {
+//   const token = localStorage.getItem("token");
+//   const res = await fetch(`/api/members/${encodeURIComponent(email)}`, {
+//     method: "DELETE",
+//     headers: {
+//       "Content-Type": "application/json",
+//       "Authorization": `Bearer ${token}` 
+//     }
+//   });
+//   const data = await res.json();
+//   if (!res.ok || !data.success) {
+//     throw new Error(data.error || "Gagal menghapus anggota tim.");
+//   }
+// }
+
+// export const apiDeleteMember = async (email: string): Promise<void> => {
+//   const response = await fetch(`/api/members/${encodeURIComponent(email)}`, {
+//     method: "DELETE", 
+//     headers: {
+//       "Content-Type": "application/json",
+//       // "Authorization": `Bearer ${token}` // Jika pakai token
+//     }
+//   });
+
+//   if (!response.ok) {
+//     throw new Error(`Gagal menghapus member. Status: ${response.status}`);
+//   }
+// };
+
+

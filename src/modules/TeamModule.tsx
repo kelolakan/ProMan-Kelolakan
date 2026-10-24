@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { TeamMember, UserRole } from "../types";
-import { Users, UserPlus, Shield, Sparkles, UserCheck, AlertTriangle } from "lucide-react";
+import { Users, UserPlus, Shield, Sparkles, UserCheck, AlertTriangle, Trash2 } from "lucide-react";
 
 interface TeamModuleProps {
   members: TeamMember[];
   userMember: TeamMember | null;
   onAddMember: (member: TeamMember) => void;
   onUpdateRole: (email: string, role: UserRole, division: string) => void;
+  onDeleteMember: (email: string) => void; 
 }
 
-export default function TeamModule({ members, userMember, onAddMember, onUpdateRole }: TeamModuleProps) {
+export default function TeamModule({ members, userMember, onAddMember, onUpdateRole, onDeleteMember }: TeamModuleProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -18,7 +19,7 @@ export default function TeamModule({ members, userMember, onAddMember, onUpdateR
 
   const isAuthorizedAdmin = userMember?.role === UserRole.ADMIN;
 
-  const divisions = ["Tech", "Marketing", "Design", "HR", "Sales", "Finance"];
+  const divisions = ["Tech", "Marketing", "Design", "HR", "Sales", "Finance", "Admin", "Operational"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +58,27 @@ export default function TeamModule({ members, userMember, onAddMember, onUpdateR
     onUpdateRole(email, newRole, div);
     alert(`Sukses mengubah peran ${email} menjadi ${newRole} (${div})!`);
   };
+
+  // const canDeleteMember = (targetMember: TeamMember) => {
+  //   const isCurrentUser = targetMember.email.toLowerCase() === userMember?.email?.toLowerCase();
+  //   if (isCurrentUser) return false;
+
+  //   if (isAuthorizedAdmin) {
+  //     return targetMember.role !== UserRole.ADMIN;
+  //   }
+
+  //   return false;
+  // };
+
+  // const handleDeleteClick = (targetMember: TeamMember) => {
+  //   const confirmDelete = window.confirm(
+  //     `Apakah Anda yakin ingin menghapus ${targetMember.name} (${targetMember.email}) dari tim? Tindakan ini tidak dapat dibatalkan.`
+  //   );
+
+  //   if (confirmDelete) {
+  //     onDeleteMember(targetMember.email);
+  //   }
+  // };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -188,6 +210,16 @@ export default function TeamModule({ members, userMember, onAddMember, onUpdateR
                     </span>
                     <span className="text-[10px] text-gray-400 truncate block">{member.email}</span>
                   </div>
+                  {/* TOMBOL HAPUS BARU */}
+                  {canDeleteMember(member) && (
+                    <button
+                      onClick={() => handleDeleteClick(member)}
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title={`Hapus ${member.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Info block */}

@@ -30,6 +30,16 @@ export interface ParsedDocumentResult {
   bank_account_name?: string;
   confidence?: number;
   raw_text_preview?: string;
+
+  // Optional fields for additional metadata
+  ship_to_company?: string;
+  ship_to_address?: string;
+  site_name?: string;
+  product_type?: string;
+  regional_site?: string;
+  po_number?: string;
+  po_date?: string;
+  site_list?: string;
 }
 
 export async function extractTextFromFile(file: File): Promise<string> {

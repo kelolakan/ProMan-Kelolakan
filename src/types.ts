@@ -34,6 +34,7 @@ export interface Project {
   contract_value?: number; // Nilai Total Proyek (IDR)
   target_margin_pct?: number; // Target Margin (%) misal 30%
   target_margin_amount?: number; // Target Margin (IDR)
+  items?: DocumentItem[];
 }
 
 export type TransactionType = "IN" | "OUT";
@@ -162,6 +163,17 @@ export interface ProjectDocument {
   created_by: string;
   created_at: string;
   status: "DRAFT" | "ISSUED" | "PAID" | "COMPLETED";
+  // Optional fields for additional metadata
+  site_name?: string;
+  product_type?: string;
+  regional_site?: string;
+  po_number?: string;
+  po_date?: string;
+  ship_to_company?: string;
+  ship_to_address?: string;
+  ship_to_phone?: string;
+  site_list?: string;
+  invoice_division?: string;
 }
 
 export interface SystemSettings {

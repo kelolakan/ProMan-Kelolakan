@@ -19,6 +19,7 @@ import FinanceModule from "./modules/FinanceModule";
 import SettingsModule from "./modules/SettingsModule";
 import DocumentsModule from "./modules/DocumentsModule";
 
+
 import {
   Project,
   Task,
@@ -31,7 +32,7 @@ import {
   TaskStatus,
   SystemSettings,
   DEFAULT_SETTINGS,
-  ProjectDocument
+  ProjectDocument,
 } from "./types";
 
 import {
@@ -62,7 +63,8 @@ import {
   apiSaveMember,
   apiSyncData,
   apiSaveDocument,
-  apiDeleteDocument
+  apiDeleteDocument,
+  apiDeleteMember
 } from "./lib/apiClient";
 
 import { INITIAL_DOCUMENTS } from "./lib/documentUtils";
@@ -472,6 +474,61 @@ export default function App() {
       console.warn("Failed to delete document on server:", e);
     }
   };
+  const handleEditProject = async (updatedProject: Project) => {
+    try {
+      const updatedProjects = projects.map((p) => 
+        p.id === updatedProject.id ? updatedProject : p
+      );
+      setProjects(updatedProjects);
+
+      saveLocalData({ projects: updatedProjects });
+
+      await apiSaveProject(updatedProject);
+      
+      alert("Proyek berhasil diperbarui!");
+    } catch (error) {
+      console.error("Error edit proyek:", error);
+      alert("Gagal memperbarui proyek");
+    }
+  };
+
+  const handleDeleteProject = async (projectId: string) => { 
+    try {
+      const updatedProjects = projects.filter((p) => p.id !== projectId);
+      
+      setProjects(updatedProjects);
+
+      saveLocalData({ projects: updatedProjects });
+
+      await apiDeleteProject(projectId); 
+
+      alert("Proyek berhasil dihapus!");
+    } catch (error) {
+      console.error("Error delete proyek:", error);
+      alert("Gagal menghapus proyek");
+    }
+  };
+
+  //   const handleDeleteMember = async (emailToDelete: string) => {
+  //   const previousMembers = members;
+  //   try {
+  //     const updatedMembers = members.filter(
+  //       (member) => member.email.toLowerCase() !== emailToDelete.toLowerCase()
+  //     );
+  //     setMembers(updatedMembers);
+  //     saveLocalData({ members: updatedMembers }); 
+
+  //     await apiDeleteMember(emailToDelete); 
+      
+  //     alert("Anggota berhasil dihapus permanen!");
+  //   } catch (error) {
+  //     console.error("Gagal menghapus anggota dari server:", error);
+  //     alert("Gagal menghapus dari server. Data dikembalikan ke semula.");
+      
+  //     setMembers(previousMembers);
+  //     saveLocalData({ members: previousMembers }); 
+  //   }
+  // };
 
   // =========================================================================
   // LOGIN SCREEN (Independent Username & Password for PT. Exven Mitra Solusindo)
@@ -614,6 +671,8 @@ export default function App() {
               activeProjectId={activeProjectId}
               setActiveProjectId={setActiveProjectId}
               onAddProject={handleAddProject}
+              onDeleteProject={handleDeleteProject}
+              onEditProject={handleEditProject}
             />
           )}
 
@@ -672,6 +731,7 @@ export default function App() {
               userMember={userMember}
               onAddMember={handleAddMember}
               onUpdateRole={handleUpdateRole}
+              onDeleteMember={handleDeleteMember}
             />
           )}
 

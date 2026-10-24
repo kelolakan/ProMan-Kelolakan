@@ -110,15 +110,26 @@ function detectDocTypeWeighted(text: string, preferred?: DocumentType): Document
 
 /** docNumber — contoh: "INV/2026/10/089" */
 function extractDocNumber(text: string): string | undefined {
+  // const patterns = [
+  //   /no\.?\s*invoice\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
+  //   /invoice\s*(?:no|number|#)\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
+  //   /no\.?\s*(?:bast|voucher|dokumen|surat|po)\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
+  //   /(?:nomor|number)\s*[:#.]\s*([A-Z0-9][A-Z0-9\/\-.]{3,40})/i,
+  // ];
+  // for (const p of patterns) {
+  //   const m = text.match(p);
+  //   if (m?.[1]) return m[1].trim().replace(/[.,;:]+$/, "");
+  // }
+  // return undefined;
+
   const patterns = [
+    /\b(\d{2,4}\/[A-Z]+\/[A-Z]+\/[A-Z]+\/\d{4})\b/i, // Format 113/EMS/INV/X/2026
     /no\.?\s*invoice\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
     /invoice\s*(?:no|number|#)\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
-    /no\.?\s*(?:bast|voucher|dokumen|surat|po)\s*[:#.]?\s*([A-Z0-9][A-Z0-9\/\-.]{2,40})/i,
-    /(?:nomor|number)\s*[:#.]\s*([A-Z0-9][A-Z0-9\/\-.]{3,40})/i,
   ];
   for (const p of patterns) {
     const m = text.match(p);
-    if (m?.[1]) return m[1].trim().replace(/[.,;:]+$/, "");
+    if (m?.[1]) return m[1].trim();
   }
   return undefined;
 }
@@ -405,27 +416,50 @@ function extractBankInfo(text: string): {
 
 /** BAST-specific fields */
 function extractBastFields(text: string) {
-  const out: {
-    workScope?: string;
-    milestone?: number;
-    atpRef?: string;
-  } = {};
+  // const out: {
+  //   workScope?: string;
+  //   milestone?: number;
+  //   atpRef?: string;
+  // } = {};
 
-  // Work scope
-  const scopeMatch = text.match(/(?:lingkup\s*pekerjaan|uraian\s*pekerjaan|work\s*scope|scope\s*of\s*work)\s*[:.]?\s*([\s\S]{10,500}?)(?=\n\s*\n|\n\s*(?:milestone|kemajuan|atp|no\.?\s*atp|pihak|catatan|note))/i);
-  if (scopeMatch?.[1]) out.workScope = scopeMatch[1].trim().replace(/\s+/g, " ").slice(0, 400);
+  // // Work scope
+  // const scopeMatch = text.match(/(?:lingkup\s*pekerjaan|uraian\s*pekerjaan|work\s*scope|scope\s*of\s*work)\s*[:.]?\s*([\s\S]{10,500}?)(?=\n\s*\n|\n\s*(?:milestone|kemajuan|atp|no\.?\s*atp|pihak|catatan|note))/i);
+  // if (scopeMatch?.[1]) out.workScope = scopeMatch[1].trim().replace(/\s+/g, " ").slice(0, 400);
 
-  // Milestone
-  const milestone = text.match(/(?:milestone|kemajuan|progress|penyelesaian)\s*[:.]?\s*(\d{1,3})\s*%/i);
-  if (milestone) {
-    const v = parseInt(milestone[1], 10);
-    if (v >= 1 && v <= 100) out.milestone = v;
-  }
+  // // Milestone
+  // const milestone = text.match(/(?:milestone|kemajuan|progress|penyelesaian)\s*[:.]?\s*(\d{1,3})\s*%/i);
+  // if (milestone) {
+  //   const v = parseInt(milestone[1], 10);
+  //   if (v >= 1 && v <= 100) out.milestone = v;
+  // }
 
-  // ATP Ref
-  const atp = text.match(/(?:no\.?\s*atp|nomor\s*atp|atp\s*ref|acceptance\s*test\s*(?:no|number)?)\s*[:.]?\s*([A-Z0-9][A-Z0-9\-\/.]{3,40})/i)
-    || text.match(/\bATP[-\/][A-Z0-9\-\/.]{3,40}/i);
-  if (atp) out.atpRef = atp[0].trim();
+  // // ATP Ref
+  // const atp = text.match(/(?:no\.?\s*atp|nomor\s*atp|atp\s*ref|acceptance\s*test\s*(?:no|number)?)\s*[:.]?\s*([A-Z0-9][A-Z0-9\-\/.]{3,40})/i)
+  //   || text.match(/\bATP[-\/][A-Z0-9\-\/.]{3,40}/i);
+  // if (atp) out.atpRef = atp[0].trim();
+
+  // return out;
+
+  const out: any = {};
+
+  const siteMatch = text.match(/Nama Site\s*\(Site Name\)\s*:\s*([^\n]+)/i);
+  if (siteMatch) out.site_name = siteMatch[1].trim();
+
+  const typeMatch = text.match(/Tipe Produk \/ Termin\s*:\s*([^\n]+)/i);
+  if (typeMatch) out.product_type = typeMatch[1].trim();
+
+  const regionalMatch = text.match(/Regional Site\s*:\s*([^\n]+)/i);
+  if (regionalMatch) out.regional_site = regionalMatch[1].trim();
+
+  const poMatch = text.match(/Nomor PO\s*:\s*([^\n]+)/i);
+  if (poMatch) out.po_number = poMatch[1].trim();
+
+  const poDateMatch = text.match(/Tanggal\s*:\s*([^\n]+)/i); // Tanggal setelah PO
+  if (poDateMatch) out.po_date = normalizeDate(poDateMatch[1]);
+
+  // Penerima (Pihak Kedua) pada BAST
+  const pihak2Match = text.match(/2\.\s*Nama\s*:.*?\n.*?Dalam hal ini bertindak untuk dan atas nama\s*([^\n]+)/i);
+  if (pihak2Match) out.recipient_company = pihak2Match[1].trim();
 
   return out;
 }
@@ -501,11 +535,26 @@ export function heuristicParse(
   const notes = extractNotes(text);
   if (notes) result.notes = notes;
 
+  // if (result.doc_type === "BAST") {
+  //   const b = extractBastFields(text);
+  //   if (b.workScope) result.work_scope = b.workScope;
+  //   if (typeof b.milestone === "number") result.milestone_percentage = b.milestone;
+  //   if (b.atpRef) result.atp_ref_number = b.atpRef;
+  // }
+
   if (result.doc_type === "BAST") {
     const b = extractBastFields(text);
-    if (b.workScope) result.work_scope = b.workScope;
-    if (typeof b.milestone === "number") result.milestone_percentage = b.milestone;
-    if (b.atpRef) result.atp_ref_number = b.atpRef;
+    if (b.site_name) result.site_name = b.site_name;
+    if (b.product_type) result.product_type = b.product_type;
+    if (b.regional_site) result.regional_site = b.regional_site;
+    if (b.po_number) result.po_number = b.po_number;
+    if (b.po_date) result.po_date = b.po_date;
+    if (b.recipient_company) result.recipient_company = b.recipient_company; // Override jika ada
+  }
+
+  if (result.doc_type === "INVOICE") {
+    const shipToMatch = text.match(/Ship To:\s*([^\n]+)/i);
+    if (shipToMatch) result.ship_to_company = shipToMatch[1].trim();
   }
 
   result.confidence = computeConfidence(result);
